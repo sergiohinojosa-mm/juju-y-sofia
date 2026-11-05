@@ -36,7 +36,7 @@
     {
       id: 'tucan', name: 'Tucanes', sound: 'toucan', clue: 'plumas',
       mom: { x: 1010, y: 335, s: .95 }, baby: { x: 760, y: 690, s: .5 },
-      clues: [{ x: 280, y: 560 }, { x: 560, y: 420 }, { x: 1460, y: 640 }],
+      clues: [{ x: 280, y: 560 }, { x: 560, y: 420 }, { x: 1440, y: 520 }],
       ask: [{ t: '¡Mi tucancito se cayó del nido!', pitch: .85, who: 'tucan' }, 'Mamá tucán está preocupada. ¡Ayudémosla, Juju! Toca lo que brilla.'],
       clueLines: ['¡Una plumita amarilla!', '¡Dos plumitas!', '¡Tres plumitas! ¿Dónde está el tucancito?'],
       found: ['¡Ahí está el tucancito!', 'Está asustadito. Tócalo suavecito.'],
@@ -62,8 +62,8 @@
     {
       id: 'perezoso', name: 'Perezosos', sound: 'sloth', clue: 'ramitas',
       mom: { x: 1150, y: 252, s: .85 }, baby: { x: 620, y: 712, s: .5 },
-      clues: [{ x: 320, y: 560 }, { x: 900, y: 620 }, { x: 1460, y: 720 }],
-      ask: [{ t: '¿Han visto a mi bebé? Se soltó de mi pancita…', pitch: .75, who: 'perezoso' }, 'Mamá perezoso está preocupada. ¡Ayudémosla, Juju! Toca lo que brilla.'],
+      clues: [{ x: 320, y: 560 }, { x: 900, y: 620 }, { x: 1470, y: 540 }],
+      ask: [{ t: '¿Han visto a mi bebecito? Se separó de mi pancita.', pitch: .75, who: 'perezoso' }, 'Mamá perezoso está preocupada. ¡Ayudémosla, Juju! Toca lo que brilla.'],
       clueLines: ['¡Una ramita café!', '¡Dos ramitas cafés!', '¡Tres ramitas! ¿Quién se esconde aquí?'],
       found: ['¡Ahí está el bebé perezoso!', 'Cayó suavecito en las hojas, pero está asustadito. Tócalo suavecito.'],
       task: 'Toca la liana que brilla para hacerle una escalera.',
@@ -94,23 +94,73 @@
   const PLAYABLE_IDS = LEVELS.filter(L => !L.soon).map(L => L.id);
 
   // ---------- Guardado (si falla, el juego sigue igual) ----------
-  const SAVE_KEY = 'jujuSofia.v1';
+  // Perfiles: cada niña tiene su propio avance y su álbum; el personaje siempre es Juju.
+  const PROFILES_KEY = 'jujuSofia.perfiles', CURRENT_KEY = 'jujuSofia.actual';
+  const PROFILE_COLORS = ['#ff5fa2', '#7e57c2', '#26a69a', '#ff9800', '#42a5f5', '#ef5350'];
+  const readKey = (k) => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } };
+  const writeKey = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
+  let profiles = readKey(PROFILES_KEY);
+  if (!Array.isArray(profiles) || !profiles.every(p => p && typeof p.id === 'string' && typeof p.name === 'string') || !profiles.length) {
+    profiles = [{ id: 'juju', name: 'Juju' }, { id: 'luciana', name: 'Luciana' }];
+  }
+  let current = readKey(CURRENT_KEY);
+  if (!profiles.some(p => p.id === current)) current = profiles[0].id;
+  // Juju conserva la llave original para no perder lo que ya jugó.
+  const saveKey = (id) => (id === 'juju' ? 'jujuSofia.v1' : 'jujuSofia.v1.' + id);
+  const profile = () => profiles.find(p => p.id === current);
+  const profileColor = (p) => PROFILE_COLORS[profiles.indexOf(p) % PROFILE_COLORS.length];
   const fresh = () => ({ rescued: [], fruits: 0, music: true, introDone: false });
-  if (/[?&]reset=1/.test(location.search)) { try { localStorage.removeItem(SAVE_KEY); } catch (e) {} }
+  // ?reset=1 borra una sola vez y se quita de la dirección, para que recargar no vuelva a borrar.
+  if (/[?&]reset=1/.test(location.search)) {
+    try { localStorage.removeItem(saveKey(current)); } catch (e) {}
+    try { history.replaceState(null, '', location.pathname); } catch (e) {}
+  }
+  const ALL_IDS = LEVELS.map(L => L.id);
   const state = load();
   function load() {
     try {
-      const s = JSON.parse(localStorage.getItem(SAVE_KEY));
+      const s = JSON.parse(localStorage.getItem(saveKey(current)));
       if (s && Array.isArray(s.rescued)) {
-        return Object.assign(fresh(), s, {
-          rescued: [...new Set(s.rescued)].filter(id => PLAYABLE_IDS.includes(id)),
-          fruits: Number.isFinite(s.fruits) ? s.fruits : 0,
-        });
+        // Se conservan todas las paradas conocidas (aunque una no cargue) y se limpian valores raros.
+        return {
+          rescued: [...new Set(s.rescued)].filter(id => ALL_IDS.includes(id)),
+          fruits: Number.isFinite(s.fruits) ? Math.min(999, Math.max(0, Math.floor(s.fruits))) : 0,
+          music: s.music !== false,
+          introDone: s.introDone === true,
+        };
       }
     } catch (e) {}
     return fresh();
   }
-  function save() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); } catch (e) {} }
+  // Si el juego está abierto en dos pestañas, se juntan los avances en lugar de que una borre a la otra.
+  function save() {
+    const disk = readKey(saveKey(current));
+    if (disk && Array.isArray(disk.rescued) && !state._reset) {
+      disk.rescued.forEach(id => { if (ALL_IDS.includes(id) && !state.rescued.includes(id)) state.rescued.push(id); });
+      if (Number.isFinite(disk.fruits) && disk.fruits > state.fruits) state.fruits = disk.fruits;
+    }
+    delete state._reset;
+    writeKey(saveKey(current), state);
+  }
+  function useProfile(id) {
+    current = id;
+    writeKey(CURRENT_KEY, id);
+    const s = load();
+    Object.keys(state).forEach(k => delete state[k]);
+    Object.assign(state, s);
+    Sound.setMusic(state.music);
+  }
+  function addProfile(name) {
+    const id = 'p' + Date.now().toString(36);
+    profiles.push({ id, name });
+    writeKey(PROFILES_KEY, profiles);
+    return id;
+  }
+  // Borra solo el avance y el álbum del perfil actual.
+  function resetProfile() {
+    try { localStorage.removeItem(saveKey(current)); } catch (e) {}
+    useProfile(current);
+  }
   const isRescued = (id) => state.rescued.includes(id);
   const nextLevel = () => { const i = LEVELS.findIndex(L => !L.soon && !isRescued(L.id)); return i < 0 ? null : i; };
   // Premios de frutas para Juju: 1 = capa de reina, 2 = capa y varita mágica.
@@ -140,6 +190,8 @@
       if (now - last < 450) return;
       last = now;
       Sound.unlock();
+      Voice.unlock();
+      Sound.sfx.tap();
       fn(e);
     });
   }
@@ -218,6 +270,7 @@
   };
   svg.addEventListener('pointerdown', (e) => {
     Sound.unlock();
+    Voice.unlock();
     if (Hint.target) Hint.reset();
     const p = svgPoint(e);
     const r = mk('circle', { cx: p.x, cy: p.y, r: 40, fill: 'none', stroke: '#fff', 'stroke-width': 8, class: 'ripple' });
@@ -308,7 +361,38 @@
         <rect x="-190" y="-70" width="380" height="140" rx="70" fill="#ff5fa2" stroke="#fff" stroke-width="8" filter="url(#shadow)"/>
         <path d="M-30,-40 L45,0 L-30,40 Z" fill="#fff"/></g></g>
       ${button('albumBtn', 1520, 80, 'album', '#ff9800')}
-      ${musicButton(1400, 80)}`;
+      ${musicButton(1400, 80)}
+      <g id="whoBtn" transform="translate(90,90)"><circle r="58" fill="${profileColor(profile())}" stroke="#fff" stroke-width="6" filter="url(#shadow)"/>
+        <text y="22" text-anchor="middle" font-size="64" font-weight="800" fill="#fff">${esc(profile().name[0].toUpperCase())}</text>
+        <text y="100" text-anchor="middle" font-size="30" font-weight="800" fill="#fff" stroke="#1b5e20" stroke-width="7" paint-order="stroke">${esc(profile().name)}</text></g>
+      <g id="picker"></g>`;
+    onTap($('#whoBtn'), () => openPicker());
+    function openPicker() {
+      const W = 300, gap = 40, all = profiles.length + 1;
+      const x0 = 800 - (all * W + (all - 1) * gap) / 2 + W / 2;
+      $('#picker').innerHTML = `<rect width="1600" height="900" fill="#0b3016" opacity=".6"/>
+        ${title(800, 200, '¿Quién juega?', 80)}` +
+        profiles.map((p, k) => `<g class="who" data-id="${p.id}" transform="translate(${x0 + k * (W + gap)},470)">
+          <rect x="${-W / 2}" y="-150" width="${W}" height="300" rx="40" fill="${profileColor(p)}" stroke="${p.id === current ? '#ffd23f' : '#fff'}" stroke-width="${p.id === current ? 14 : 6}" filter="url(#shadow)"/>
+          <text y="30" text-anchor="middle" font-size="140" font-weight="800" fill="#fff">${esc(p.name[0].toUpperCase())}</text>
+          <text y="115" text-anchor="middle" font-size="42" font-weight="800" fill="#fff">${esc(p.name)}</text></g>`).join('') +
+        `<g id="addWho" transform="translate(${x0 + profiles.length * (W + gap)},470)"><rect x="${-W / 2}" y="-150" width="${W}" height="300" rx="40" fill="rgba(255,255,255,.25)" stroke="#fff" stroke-width="6" stroke-dasharray="18 12"/>
+          <text y="50" text-anchor="middle" font-size="160" font-weight="800" fill="#fff">+</text></g>`;
+      say('¿Quién va a jugar?');
+      $$('.who').forEach(el => onTap(el, () => {
+        useProfile(el.dataset.id);
+        Sound.sfx.chime();
+        say(`¡Hola, ${profile().name}!`);
+        later(() => go(cover), 900);
+      }));
+      onTap($('#addWho'), () => {
+        const name = (window.prompt('¿Cómo se llama la nueva jugadora?') || '').trim().slice(0, 14);
+        if (!name) return;
+        useProfile(addProfile(name));
+        say(`¡Hola, ${name}!`);
+        later(() => go(cover), 900);
+      });
+    }
     onTap($('#playBtn'), () => {
       Sound.setMusic(state.music);
       Sound.sfx.pop();
@@ -342,8 +426,8 @@
       });
     };
     say([
-      { t: '¡Juju! ¡Juju! La lluvia asustó a los bebés de la selva y se separaron de sus mamás.', pitch: .85, who: 'tucan' },
-      { t: '¿Nos ayudas a encontrarlos?', pitch: .85, who: 'tucan' },
+      { t: '¡Juju! ¡Juju! La lluvia separó a los bebés de la selva. Vamos a buscar a sus mamás.', pitch: .85, who: 'tucan' },
+      { t: '¿Nos ayudas a buscarlos?', pitch: .85, who: 'tucan' },
       '¡Claro que sí! Toma, Juju: tu cámara mágica. ¡Tócala!',
     ], showCamera);
     later(showCamera, 12000);
@@ -459,7 +543,7 @@
       ${button('homeBtn', 80, 80, 'home', '#7e57c2')}`;
     const objLayer = $('#objs'), raftPos = $('#raftPos'), bank = $('#bank'), wavesEl = $('#waves'), prog = $('#prog');
     function drawJar() {
-      const f = (state.fruits % 5) / 5;
+      const f = state.fruits > 0 && state.fruits % 5 === 0 ? 1 : (state.fruits % 5) / 5;
       $('#jar').innerHTML = `<rect x="-50" y="-60" width="100" height="120" rx="24" fill="rgba(255,255,255,.55)" stroke="#fff" stroke-width="6"/>
         <rect x="-42" y="${(52 - 104 * f).toFixed(0)}" width="84" height="${(104 * f).toFixed(0)}" rx="16" fill="#ff7043"/>
         <rect x="-36" y="-76" width="72" height="20" rx="8" fill="#8d5a2b"/>
@@ -524,7 +608,7 @@
     raf = requestAnimationFrame(frame);
     cleanup.push(() => cancelAnimationFrame(raf));
 
-    const move = (d) => { const n = Math.max(0, Math.min(2, lane + d)); if (n !== lane) { lane = n; Sound.sfx.pop(); } };
+    const move = (d) => { const n = Math.max(0, Math.min(2, lane + d)); if (n !== lane) { Sound.sfx[n < lane ? 'raftUp' : 'raftDown'](); lane = n; } };
     const onKey = (e) => {
       if (e.key === 'ArrowUp' || e.key === 'w') { move(-1); e.preventDefault(); }
       if (e.key === 'ArrowDown' || e.key === 's') { move(1); e.preventDefault(); }
@@ -557,7 +641,8 @@
       ${L.bg()}
       <g id="playBack"></g>
       <g id="clues">${L.clues.map((c, k) => `<g class="clue" data-k="${k}" transform="translate(${c.x},${c.y})">
-        <circle r="85" fill="transparent"/><g class="wiggle" style="animation-delay:${k * .4}s">${Art.clue(L.clue)}</g>
+        <circle r="85" fill="transparent"/><g class="halo"><circle r="80" fill="#fff59d"/><circle r="80" fill="none" stroke="#ffd23f" stroke-width="8"/></g>
+        <g class="wiggle" style="animation-delay:${k * .4}s">${Art.clue(L.clue)}</g>
         <g pointer-events="none">${Art.leaf(-80, 40, .7, -20, '#2e7d32')}${Art.leaf(70, 46, .6, 200, '#388e3c')}</g></g>`).join('')}</g>
       <g id="mom"><g>${Art.animal(L.id)}</g></g>
       <g id="baby"></g>
@@ -583,6 +668,7 @@
       if (phase !== 'clues' || el.dataset.done) return;
       el.dataset.done = '1';
       Sound.sfx.shutter(); flash();
+      el.querySelector('.halo').remove();
       const w = el.querySelector('.wiggle');
       w.removeAttribute('style'); w.setAttribute('class', 'snapped');
       later(() => el.remove(), 650);
@@ -711,7 +797,7 @@
   function setupToucan(api) {
     const STEPS = [[860, 630], [940, 570], [1010, 510], [1070, 450], [1110, 390]];
     api.back.innerHTML = STEPS.map(([x, y], k) => `<g class="bud" data-k="${k}" transform="translate(${x},${y})" style="display:${k ? 'none' : 'inline'}">
-      <circle r="70" fill="transparent"/><g class="pop-in"><g class="grow bud-art" style="transform:scale(.4)">
+      <circle r="70" fill="transparent"/><g class="halo"><circle r="72" fill="#fff59d"/></g><g class="pop-in"><g class="grow bud-art" style="transform:scale(.4)">
       <ellipse cx="0" cy="6" rx="58" ry="16" fill="#43a047"/>${Art.flower(0, -4, ['#ff5fa2', '#ffd23f', '#ff8a65', '#ba68c8', '#ff5fa2'][k], 2.6)}</g></g></g>`).join('') +
       `<g id="siblings"></g>`;
     const buds = [...api.back.querySelectorAll('.bud')];
@@ -720,6 +806,7 @@
       if (j !== k) return;
       k++;
       b.querySelector('.bud-art').style.transform = 'scale(1)';
+      b.querySelector('.halo').remove();
       Sound.sfx.pop();
       const [x, y] = STEPS[j];
       countPop(k, x, y - 90);
@@ -768,7 +855,7 @@
         // Sorpresa: mamá perezoso tarda y tarda. Juju la toca para animarla.
         phase = 'slow';
         Sound.sfx.sloth();
-        api.say(['¡Ahí viene su mamá!', { t: 'Ya… vooooy…', pitch: .6, rate: .7, who: 'perezoso' }, 'Mamá es muy lenta. ¡Tócala para animarla!']);
+        api.say(['¡Ahí viene su mamá!', { t: '¡Yaaa voooy!', pitch: .6, rate: .7, who: 'perezoso' }, 'Mamá es muy lenta. ¡Tócala para animarla!']);
         api.mom.firstChild.setAttribute('class', 'pulse');
         api.hint(() => phase === 'slow' && { x: api.mom._pos.x, y: api.mom._pos.y - 90, say: 'Toca a mamá perezoso, Juju.' });
       }), 400);
@@ -911,8 +998,31 @@
       ${title(800, 110, 'Álbum de la Selva', 80)}
       ${slots}
       ${button('backBtn', 80, 80, 'home', '#7e57c2')}
+      <g id="resetBtn" transform="translate(1530,840)"><circle r="40" fill="#b0bec5" stroke="#fff" stroke-width="4"/>
+        <path d="M14,-14 A20,20 0 1 0 20,6" stroke="#fff" stroke-width="7" fill="none" stroke-linecap="round"/><path d="M8,-26 L20,-12 L4,-6 Z" fill="#fff"/>
+        <circle id="resetRing" r="52" fill="none" stroke="#ef5350" stroke-width="8" stroke-dasharray="327" stroke-dashoffset="327" transform="rotate(-90)"/></g>
       <g id="modal"></g>`;
     onTap($('#backBtn'), () => go(from === 'cover' ? cover : map));
+    // Reinicio para papás: mantener presionado 3 segundos y confirmar. Un toque corto no hace nada.
+    const resetBtn = $('#resetBtn'), ring = $('#resetRing');
+    let hold = null;
+    const cancelHold = () => { clearTimeout(hold); ring.style.transition = 'none'; ring.style.strokeDashoffset = '327'; };
+    resetBtn.addEventListener('pointerdown', (e) => {
+      e.stopPropagation();
+      ring.getBoundingClientRect();
+      ring.style.transition = 'stroke-dashoffset 3s linear';
+      ring.style.strokeDashoffset = '0';
+      hold = setTimeout(() => {
+        cancelHold();
+        if (window.confirm(`¿Empezar de nuevo? Se borrará el avance y el álbum de ${profile().name}.`)) {
+          resetProfile();
+          say('Listo. ¡Empezamos una nueva aventura!');
+          later(() => go(cover), 1200);
+        }
+      }, 3000);
+    });
+    ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => resetBtn.addEventListener(ev, cancelHold));
+    cleanup.push(() => clearTimeout(hold));
     $$('.slot').forEach(el => onTap(el, () => {
       const L = LEVELS[+el.dataset.i];
       if (L.soon || !isRescued(L.id)) { say(+el.dataset.i === LEVELS.length - 1 ? '¿Quién será? ¡Lo sabremos al final del río!' : 'Esta foto todavía no la tomamos.'); return; }
@@ -939,5 +1049,8 @@
   }
 
   // ---------- Arranque ----------
+  // Sin internet también se puede jugar (en https), y se pide al navegador que no borre el álbum.
+  if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
+  try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {}
   cover();
 })();

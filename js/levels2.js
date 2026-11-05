@@ -18,7 +18,7 @@
       ['¡Una ranita!', `<g transform="translate(0,40) scale(.4)">${Art.animal('rana')}</g>`],
     ];
     api.front.innerHTML = BUSH.map(([x, y], k) => `<g class="mbush" data-k="${k}" transform="translate(${x},${y})">
-      <circle cy="-60" r="95" fill="transparent"/><g class="pop-in"><g class="bush-art">${Art.bush(0, 0, 1.1, ['#43a047', '#4caf50', '#388e3c'][k])}</g></g>
+      <circle cy="-60" r="95" fill="transparent"/><g class="halo"><circle cy="-50" r="96" fill="#fff59d"/></g><g class="pop-in"><g class="bush-art">${Art.bush(0, 0, 1.1, ['#43a047', '#4caf50', '#388e3c'][k])}</g></g>
       <g class="tail" pointer-events="none"></g></g>`).join('');
     const bushes = [...api.front.querySelectorAll('.mbush')];
     let round = 0, phase = 'hide', other = 0;
@@ -93,7 +93,7 @@
       <g pointer-events="none">${Art.leaf(-74, 16, .5, -20, '#43a047')}${Art.leaf(66, 20, .45, 200, '#388e3c')}${Art.flower(-34, 4, FLOWERS[k], 1.7)}${Art.flower(32, 10, FLOWERS[(k + 2) % 5], 1.5)}${Art.flower(-2, 22, FLOWERS[(k + 1) % 5], 1.6)}</g></g>`).join('');
     const spots = [...api.front.querySelectorAll('.fspot')];
     let k = 0;
-    const show = () => { spots[k].querySelector('.plume').innerHTML = `<g transform="translate(0,-36)"><g class="pop-in"><g class="wiggle">${Art.feather(0, 0, k % 2 ? 18 : -18, SPOTS[k][2])}</g></g></g>`; };
+    const show = () => { spots[k].querySelector('.plume').innerHTML = `<g transform="translate(0,-36)"><g class="halo"><circle r="64" fill="#fff59d"/></g><g class="pop-in"><g class="wiggle">${Art.feather(0, 0, k % 2 ? 18 : -18, SPOTS[k][2])}</g></g></g>`; };
     spots.forEach((el, j) => api.tap(el, () => {
       if (j !== k) return;
       k++;
@@ -192,7 +192,7 @@
   function setupJaguar(api) {
     const T = [[480, 676], [650, 682], [820, 676], [990, 682]];
     api.back.innerHTML = T.map(([x, y], k) => `<g class="turtle" data-k="${k}" transform="translate(${x},${y})" style="display:none">
-      <circle cy="-24" r="75" fill="transparent"/><g class="pop-in"><g class="t-art pulse">${Art.turtle('happy')}</g></g><g class="t-bub" pointer-events="none"></g></g>`).join('');
+      <circle cy="-24" r="75" fill="transparent"/><g class="halo"><circle cy="-24" r="78" fill="#fff59d"/></g><g class="pop-in"><g class="t-art pulse">${Art.turtle('happy')}</g></g><g class="t-bub" pointer-events="none"></g></g>`).join('');
     const turtles = [...api.back.querySelectorAll('.turtle')];
     let k = 0, phase = 'bridge';
     // La tortuga asoma con burbujitas.
@@ -204,6 +204,8 @@
     };
     turtles.forEach((t, j) => api.tap(t, () => {
       if (phase !== 'bridge' || j !== k) return;
+      const halo = t.querySelector('.halo');
+      if (halo) halo.remove();
       k++;
       phase = 'hop';
       t.querySelector('.t-art').setAttribute('class', 't-art');
@@ -244,7 +246,10 @@
     const clumps = [...api.front.querySelectorAll('.clump')];
     const bf = api.front.querySelector('#bfly');
     let k = 0, phase = 'run';
-    const wiggle = (j) => clumps[j].querySelector('.c-art').setAttribute('class', 'c-art wiggle');
+    const wiggle = (j) => {
+      clumps[j].querySelector('.c-art').setAttribute('class', 'c-art wiggle');
+      clumps[j].insertAdjacentHTML('afterbegin', '<g class="halo"><circle cy="-75" r="84" fill="#fff59d"/></g>');
+    };
 
     // Pasa una mariposa y el cachorro se va brincando tras ella hasta el pasto alto.
     const b0 = api.baby._pos;
@@ -269,6 +274,8 @@
     }
     clumps.forEach((el, j) => api.tap(el, () => {
       if (phase !== 'seek' || j !== k) return;
+      const halo = el.querySelector('.halo');
+      if (halo) halo.remove();
       const art = el.querySelector('.c-art');
       art.setAttribute('class', 'c-art');
       bump(art, 'wobble');

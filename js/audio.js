@@ -62,6 +62,11 @@ const Sound = (() => {
   }
 
   const sfx = {
+    // Toque general: un "tic" suave y alegre en cada botón o cosa que se toca.
+    tap: () => { tone(880, 0, 0.07, { vol: 0.12, slide: 1320 }); },
+    // La balsa sube o baja: chapoteo de agua y un tonito que sube o baja con ella.
+    raftUp: () => { noise(0, 0.25, { vol: 0.28, freq: 700, q: 0.7, type: 'lowpass' }); tone(330, 0, 0.18, { type: 'triangle', vol: 0.16, slide: 560 }); },
+    raftDown: () => { noise(0, 0.25, { vol: 0.28, freq: 600, q: 0.7, type: 'lowpass' }); tone(560, 0, 0.18, { type: 'triangle', vol: 0.16, slide: 330 }); },
     tick: () => tone(700, 0, 0.06, { vol: 0.06 }),
     pop: () => tone(520, 0, 0.12, { vol: 0.25, slide: 900 }),
     shutter: () => { noise(0, 0.05, { vol: 0.6, freq: 3200 }); noise(0.08, 0.07, { vol: 0.45, freq: 2000 }); },
@@ -237,6 +242,15 @@ const Voice = (() => {
     u.onerror = done;
     synth.speak(u);
   }
+
+  // iPhone: la voz del navegador solo funciona si se "despierta" dentro de un toque. Como el juego
+  // puede empezar con una voz grabada, se despierta en el primer toque con una frase muda.
+  let awake = false;
+  api.unlock = () => {
+    if (awake || !synth) return;
+    awake = true;
+    try { const u = new SpeechSynthesisUtterance(' '); u.volume = 0; u.lang = 'es-MX'; synth.speak(u); } catch (e) {}
+  };
 
   api.stop = () => {
     seq++;

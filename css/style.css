@@ -144,3 +144,7 @@ body { position: fixed; inset: 0; }
 @media (prefers-reduced-motion: reduce) {
   .wiggle, .pulse, .bob, .drift, .happy-jump, .flow { animation: none; }
 }
+
+/* Brillo amarillo que pulsa detrás de lo que hay que tocar */
+.halo { transform-box: fill-box; transform-origin: center; animation: halo 1.3s ease-in-out infinite; pointer-events: none; }
+@keyframes halo { 0%, 100% { transform: scale(.85); opacity: .35; } 50% { transform: scale(1.1); opacity: .85; } }

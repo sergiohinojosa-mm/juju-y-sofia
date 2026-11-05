@@ -83,7 +83,7 @@ const Art = (() => {
     return `<g>${s}</g>`;
   };
 
-  // Juju (se parece a Julia): pelo largo ondulado y esponjado, castaño claro con mechas doradas,
+  // Juju: pelo largo ondulado y esponjado, castaño claro con mechas doradas,
   // raya de lado sin fleco, piel bronceada, ojos cafés grandes, aretitos dorados, pulsera rosa,
   // vestido rosa y corona de reina.
   A.juju = (o = {}) => A.kid(Object.assign({
