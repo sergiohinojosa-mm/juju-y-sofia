@@ -186,7 +186,8 @@
   function mk(tag, attrs = {}) { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); return e; }
 
   // Cada escena nueva invalida los temporizadores y animaciones de la anterior.
-  function go(fn, ...args) { token++; Voice.stop(); Hint.clear(); cleanup.forEach(f => f()); cleanup = []; fn(...args); }
+  let sceneAt = 0;
+  function go(fn, ...args) { token++; sceneAt = Date.now(); Voice.stop(); Hint.clear(); cleanup.forEach(f => f()); cleanup = []; fn(...args); }
   function alive() { const t = token; return () => t === token; }
   function later(fn, ms) { const ok = alive(); setTimeout(() => { if (ok()) fn(); }, ms); }
   function say(lines, onEnd) { const ok = alive(); Voice.say(lines, onEnd && (() => { if (ok()) onEnd(); })); }
@@ -199,7 +200,7 @@
     el.addEventListener('click', (e) => {
       e.stopPropagation();
       const now = Date.now();
-      if (now - last < 450) return;
+      if (now - last < 450 || now - sceneAt < 450) return;
       last = now;
       Sound.unlock();
       Voice.unlock();
@@ -579,7 +580,7 @@
       Sound.sfx.boing();
       restart($('#wob'), 'wobble');
       o.g.firstChild.classList.add('knock');
-      if (bumps++ === 0) say('¡Boing! No pasa nada.');
+      if (bumps++ === 0 && !Voice.speaking) say('¡Boing! No pasa nada.');
     }
     function grab(o) {
       Sound.sfx.chime();
@@ -709,6 +710,7 @@
       onTap(babyEl, () => {
         if (phase !== 'calm') return;
         phase = 'help';
+        babyEl.querySelectorAll('.halo, circle[fill="transparent"]').forEach(n => n.remove());
         hearts(babyEl._pos.x, babyEl._pos.y - 60);
         Sound.sfx.chime();
         say(['¡Suavecito! Ya se siente mejor.', L.task]);
@@ -772,7 +774,7 @@
   // ---------- Minijuego 1: nubes que llenan el charco ----------
   function setupFrog(api) {
     const CLOUDS = [[760, 170], [990, 115], [1220, 170]];
-    api.back.innerHTML = CLOUDS.map(([x, y], k) => `<g class="cloud" data-k="${k}" transform="translate(${x},${y})"><g class="drift" style="animation-delay:${-k * 2}s"><g class="pop-in cloud-art">${Art.cloud(true)}</g></g></g>`).join('') +
+    api.back.innerHTML = CLOUDS.map(([x, y], k) => `<g class="cloud" data-k="${k}" transform="translate(${x},${y})"><g class="halo"><ellipse rx="160" ry="100" fill="#fff59d"/></g><g class="drift" style="animation-delay:${-k * 2}s"><g class="pop-in cloud-art">${Art.cloud(true)}</g></g></g>`).join('') +
       `<g transform="translate(980,758)"><g id="water" class="grow" style="transform:scale(.001)"><ellipse rx="250" ry="60" fill="url(#water)"/><ellipse cx="-60" cy="-14" rx="70" ry="10" fill="#fff" opacity=".45"/></g></g>
        <g id="rainbow"></g>`;
     const water = api.back.querySelector('#water');
@@ -782,6 +784,7 @@
       if (c.dataset.used) return;
       c.dataset.used = '1';
       c.querySelector('.cloud-art').innerHTML = Art.cloud(false);
+      c.querySelector('.halo').remove();
       Sound.sfx.rain();
       const [x, y] = CLOUDS[+c.dataset.k];
       const rain = mk('g', { 'pointer-events': 'none' });
