@@ -217,7 +217,7 @@ const Voice = (() => {
   (window.FRASES || []).forEach(f => { if (f.file) recorded[norm(f.t)] = 'audio/' + f.file; });
   // Voz de Sofía pregrabada (tts.js). Así suena aun con el iPhone en modo silencio.
   const tts = {};
-  Object.entries(window.TTS_FILES || {}).forEach(([k, f]) => { tts[k] = 'audio/tts/' + f; });
+  Object.entries(window.TTS_FILES || {}).forEach(([k, f]) => { tts[norm(k)] = 'audio/tts/' + f; });
   const fileFor = (t) => recorded[norm(t)] || tts[norm(t)];
 
   // Un solo reproductor para todas las frases; el iPhone lo deja sonar después del primer toque.
@@ -239,6 +239,10 @@ const Voice = (() => {
     });
   }
   api.recordedCount = () => Object.keys(recorded).length;
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) { if (!player.paused) { player.pause(); player._resume = true; } }
+    else if (player._resume) { player._resume = false; player.play().catch(() => {}); }
+  });
 
   // Dice una o varias frases, una tras otra. Cada frase puede ser texto o {t, pitch, rate, who}
   // (who = quién habla, para el retrato del globo). onEnd se llama al terminar.
@@ -269,7 +273,7 @@ const Voice = (() => {
       const file = fileFor(l.t);
       // Los audios avisan solos cuando terminan (ver playVoice); este es solo un tope.
       const safety = setTimeout(go, file ? 20000 : l.t.length * 110 + 3000);
-      if (file) playVoice(file).then(go, () => speak(l, go));
+      if (file) playVoice(file).then(go, () => { if (my === seq) speak(l, go); });
       else speak(l, go);
     };
     next();
@@ -281,10 +285,11 @@ const Voice = (() => {
   function hush() {
     if (synth && (synth.speaking || synth.pending)) { synth.cancel(); lastHush = performance.now(); }
   }
-  function speak(l, done) {
+  function speak(l, done, my = seq) {
+    if (my !== seq) return;
     if (!synth) { setTimeout(done, l.t.length * 70 + 800); return; }
     const wait = 180 - (performance.now() - lastHush);
-    if (wait > 0) { setTimeout(() => speak(l, done), wait); return; }
+    if (wait > 0) { setTimeout(() => speak(l, done, my), wait); return; }
     if (synth.paused) synth.resume();
     if (!voice) pick();
     // Se escribe "Juju" pero se dice "Yuyú".
@@ -305,10 +310,11 @@ const Voice = (() => {
   let awake = false;
   api.unlock = () => {
     // El reproductor de frases se "despierta" tocando un audio mudo dentro del toque.
-    if (!playerReady) {
+    if (!playerReady && !api.speaking) {
       playerReady = true;
       player.src = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=';
-      player.play().catch(() => { playerReady = false; });
+      // Solo se reintenta si el aparato lo negó; si otra frase lo interrumpió, ya quedó despierto.
+      player.play().catch((e) => { if (e && e.name === 'NotAllowedError') playerReady = false; });
     }
     if (awake || !synth) return;
     awake = true;
