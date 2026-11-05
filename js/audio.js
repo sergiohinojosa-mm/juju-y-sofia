@@ -208,7 +208,7 @@ const Voice = (() => {
     lines = [].concat(lines).filter(Boolean).map(l => typeof l === 'string' ? { t: l } : l);
     if (!lines.length) return;
     const my = ++seq;
-    if (synth) synth.cancel();
+    hush();
     Sound.stopFile();
     api.speaking = true;
     Sound.duck(true);
@@ -236,8 +236,17 @@ const Voice = (() => {
     next();
   };
 
+  // Safari (sobre todo en iPhone) ignora una frase que se pide justo después de callar la anterior,
+  // así que solo se calla si de verdad hay algo sonando, y se espera un instante antes de volver a hablar.
+  let lastHush = 0, current = null;
+  function hush() {
+    if (synth && (synth.speaking || synth.pending)) { synth.cancel(); lastHush = performance.now(); }
+  }
   function speak(l, done) {
     if (!synth) { setTimeout(done, l.t.length * 70 + 800); return; }
+    const wait = 180 - (performance.now() - lastHush);
+    if (wait > 0) { setTimeout(() => speak(l, done), wait); return; }
+    if (synth.paused) synth.resume();
     if (!voice) pick();
     const u = new SpeechSynthesisUtterance(l.t);
     u.lang = voice ? voice.lang : 'es-MX';
@@ -247,6 +256,7 @@ const Voice = (() => {
     u.onend = done;
     // Si la voz falla, dejar el texto en pantalla el tiempo de leerlo antes de seguir.
     u.onerror = () => setTimeout(done, l.t.length * 70 + 800);
+    current = u; // se guarda para que el navegador no la descarte antes de terminar
     synth.speak(u);
   }
 
@@ -256,13 +266,13 @@ const Voice = (() => {
   api.unlock = () => {
     if (awake || !synth) return;
     awake = true;
-    try { const u = new SpeechSynthesisUtterance(' '); u.volume = 0; u.lang = 'es-MX'; synth.speak(u); } catch (e) {}
+    try { const u = new SpeechSynthesisUtterance('hola'); u.volume = 0; u.rate = 2; u.lang = 'es-MX'; synth.speak(u); } catch (e) {}
   };
 
   api.stop = () => {
     seq++;
     api.speaking = false;
-    if (synth) synth.cancel();
+    hush();
     Sound.stopFile();
     Sound.duck(false);
     if (api.onDone) api.onDone();
