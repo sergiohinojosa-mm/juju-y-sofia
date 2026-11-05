@@ -478,7 +478,7 @@
       <path d="${river}" stroke="#5ccbff" stroke-width="64" fill="none" stroke-linecap="round"/>
       <path class="flow" d="${river}" stroke="#e1f5fe" stroke-width="6" fill="none" stroke-dasharray="20 30"/>
       ${markers}
-      <g transform="translate(${rx},${ry}) scale(.28)"><g class="bob">${raftArt()}</g></g>
+      <g transform="translate(${rx},${ry}) scale(${(.28 * 420 / (420 + state.rescued.length * 74)).toFixed(3)})"><g class="bob">${raftArt()}</g></g>
       ${title(800, 90, 'El río de la selva', 64)}
       ${button('homeBtn', 80, 80, 'home', '#7e57c2')}
       ${button('albumBtn', 1520, 80, 'album', '#ff9800')}
@@ -527,7 +527,8 @@
   // ---------- Viaje en balsa ----------
   function travel(i) {
     bubblePos = 'top';
-    const LANES = [500, 630, 760], RAFT_X = 330, DURATION = 32, SPEED = 420, HALF = 160;
+    // La balsa crece con cada familia: se recorre a la derecha y atrapa frutas en todo su largo.
+    const LANES = [500, 630, 760], RAFT_X = 370, DURATION = 32, SPEED = 420, HALF = Math.max(160, (420 + state.rescued.length * 74) * .72 / 2 * .8);
     const FRUITS = ['🍓', '🍌', '🥭', '🍊', '🍇'];
     const tile = (ox) => [80, 330, 560, 820, 1080, 1330].map(x => Art.tree(x + ox, 430, .45)).join('') + Art.bush(200 + ox, 430, .6) + Art.bush(950 + ox, 430, .6);
     const waves = Array.from({ length: 4 }, (_, r) => Array.from({ length: 10 }, (_, c) => `<path d="M${c * 200 + (r % 2) * 100},${450 + r * 100} q20,-12 40,0" stroke="#fff" stroke-width="4" fill="none" opacity=".5"/>`).join('')).join('');
@@ -911,7 +912,7 @@
       say(['¡Clic! Esta foto es tuya para siempre.', L.fact], () => {
         Sound.sfx.chime();
         $('#giftSpot').innerHTML = `<g transform="translate(1150,420)"><g class="pop-in"><circle r="150" fill="#fffde7" stroke="#ffd23f" stroke-width="10" filter="url(#shadow)"/><g transform="scale(1.6)">${Art.gift(L.id)}</g></g></g>`;
-        say([L.gift, L.bye], () => {
+        say([L.gift, 'Y el bebé quiere acompañarnos en la balsa hasta la fiesta del final del río. ¡Súbete!'], () => {
           $('#giftSpot').innerHTML += button('nextBtn', 1150, 760, '🛶', '#66bb6a', 80, 'pulse');
           Hint.set(() => ({ x: 1150, y: 760, say: 'Toca la balsa para seguir, Juju.' }));
           onTap($('#nextBtn'), () => go(map, { after: i }));

@@ -230,23 +230,47 @@ const Art = (() => {
   }[id] || EXTRA_GIFTS[id] || '');
 
   // ---------- La balsa ----------
+  // La balsa mejora con cada familia reunida (idea de Juju) y los bebés rescatados viajan arriba:
+  // 2 familias = barandal, 4 = techito de hoja, 6 = guirnalda de flores, 8 = balsa dorada con estrella.
+  // `gifts` son los ids de las paradas rescatadas.
   A.raft = ({ gifts = [], accessory = 0, mud = false } = {}) => {
-    const W = 420, x0 = -W / 2;
+    const friends = gifts.filter(id => ANIMALS[id]), n = friends.length;
+    const W = 420 + n * 74, x0 = -W / 2, gold = n >= 8;
     let s = `<ellipse cx="0" cy="56" rx="${W / 2 + 40}" ry="14" fill="#fff" opacity=".35"/>`;
+    // postes del techito (atrás)
+    if (n >= 4) s += `<rect x="${x0 + 92}" y="-262" width="10" height="262" rx="5" fill="#6d4126"/><rect x="${x0 + W - 64}" y="-262" width="10" height="262" rx="5" fill="#6d4126"/>`;
+    // barandal
+    if (n >= 2) {
+      for (let x = x0 + 50; x <= x0 + W - 40; x += 90) s += `<rect x="${x}" y="-74" width="9" height="66" rx="4" fill="#8d5a2b"/>`;
+      s += `<path d="M${x0 + 50},-66 Q${x0 + W / 2},-50 ${x0 + W - 32},-66" stroke="#f1d28a" stroke-width="6" fill="none"/>`;
+    }
     // mástil, bandera rosa y regalitos
-    s += `<rect x="${x0 + 30}" y="-250" width="10" height="250" rx="5" fill="#6d4126"/>`;
+    s += `<rect x="${x0 + 30}" y="-250" width="10" height="250" rx="5" fill="${gold ? '#ffb300' : '#6d4126'}"/>`;
+    if (gold) s += `<path d="M${x0 + 35},-290 L${x0 + 43},-272 L${x0 + 62},-270 L${x0 + 48},-257 L${x0 + 52},-238 L${x0 + 35},-248 L${x0 + 18},-238 L${x0 + 22},-257 L${x0 + 8},-270 L${x0 + 27},-272 Z" fill="#ffd23f" stroke="#ff9800" stroke-width="3"/>`;
     s += gifts.includes('tucan')
       ? `<g transform="translate(${x0 + 80},-218) rotate(90)">${A.gift('tucan')}</g>`
       : `<path d="M${x0 + 40},-246 L${x0 + 130},-218 L${x0 + 40},-190 Z" fill="#ff5fa2"/>`;
     if (gifts.includes('rana')) s += `<g transform="translate(${x0 + 60},-246) scale(1.4)">${A.gift('rana')}</g>`;
     s += `<g transform="translate(${x0 + 140},-8) scale(.62)">${A.juju({ accessory, mud })}</g>`;
     s += `<g transform="translate(${x0 + 260},-8) scale(.62)">${A.sofia({ mud })}</g>`;
-    if (gifts.includes('perezoso')) s += `<g transform="translate(${x0 + 360},-30)">${A.gift('perezoso')}</g>`;
-    // troncos
+    // amigos rescatados, en fila junto a Sofía
+    friends.forEach((id, k) => { s += `<g transform="translate(${x0 + 356 + k * 74},-52)">${A.thumb(id, 92)}</g>`; });
+    if (gifts.includes('perezoso')) s += `<g transform="translate(${x0 + W - 30},-30)">${A.gift('perezoso')}</g>`;
+    // techito de hoja y guirnalda
+    if (n >= 4) {
+      s += `<path d="M${x0 + 70},-252 Q${x0 + W / 2 + 10},-330 ${x0 + W - 36},-252 Q${x0 + W / 2 + 10},-282 ${x0 + 70},-252 Z" fill="#43a047"/>`;
+      s += `<path d="M${x0 + 90},-262 Q${x0 + W / 2 + 10},-312 ${x0 + W - 56},-262" stroke="#81c784" stroke-width="5" fill="none"/>`;
+    }
+    if (n >= 6) for (let k = 0; k < 7; k++) {
+      const u = k / 6, x = x0 + 90 + (W - 150) * u, y = -250 + 22 * Math.sin(Math.PI * u);
+      s += A.flower(x, y, ['#ff5fa2', '#ffd23f', '#ba68c8', '#ff8a65'][k % 4], .9);
+    }
+    // troncos (con orilla dorada al final)
     s += `<rect x="${x0}" y="-10" width="${W}" height="32" rx="16" fill="#b0743a"/>`;
     s += `<rect x="${x0 + 12}" y="18" width="${W - 24}" height="32" rx="16" fill="#8d5a2b"/>`;
+    if (gold) s += `<rect x="${x0}" y="-12" width="${W}" height="8" rx="4" fill="#ffd23f"/>`;
     s += `<circle cx="${x0 + 16}" cy="6" r="13" fill="#d9a066"/><circle cx="${x0 + W - 16}" cy="6" r="13" fill="#d9a066"/>`;
-    for (let x = x0 + 70; x < x0 + W - 40; x += 110) s += `<rect x="${x}" y="-12" width="10" height="64" rx="4" fill="#f1d28a"/>`;
+    for (let x = x0 + 70; x < x0 + W - 40; x += 110) s += `<rect x="${x}" y="-12" width="10" height="64" rx="4" fill="${gold ? '#ffe082' : '#f1d28a'}"/>`;
     // Regalitos de las paradas 4 a 8: chiquitos, en fila sobre el tronco de enfrente.
     gifts.filter(id => EXTRA_GIFTS[id]).forEach((id, k) => { s += `<g transform="translate(${x0 + 70 + k * 70},34) scale(.45)">${EXTRA_GIFTS[id]}</g>`; });
     return s;
