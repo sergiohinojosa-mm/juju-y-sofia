@@ -20,13 +20,28 @@ const Sound = (() => {
     }
     if (ctx.state !== 'running') ctx.resume();
     if (musicOn && !timer) startMusic();
+    // iPhone en modo silencio: los efectos solo suenan si hay un audio "normal" reproduciéndose.
+    // Un audio mudo en bucle mantiene ese canal abierto.
+    if (!keepAlive) { keepAlive = new Audio(silentWav()); keepAlive.loop = true; keepAlive.volume = 0.01; }
+    if (keepAlive.paused) keepAlive.play().catch(() => {});
+  }
+  let keepAlive = null;
+  // Un archivo WAV mudo de medio segundo, hecho aquí mismo.
+  function silentWav() {
+    const rate = 8000, n = rate / 2, buf = new ArrayBuffer(44 + n), v = new DataView(buf);
+    const str = (o, t) => [...t].forEach((c, i) => v.setUint8(o + i, c.charCodeAt(0)));
+    str(0, 'RIFF'); v.setUint32(4, 36 + n, true); str(8, 'WAVEfmt '); v.setUint32(16, 16, true);
+    v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, rate, true); v.setUint32(28, rate, true);
+    v.setUint16(32, 1, true); v.setUint16(34, 8, true); str(36, 'data'); v.setUint32(40, n, true);
+    for (let i = 0; i < n; i++) v.setUint8(44 + i, 128);
+    return URL.createObjectURL(new Blob([buf], { type: 'audio/wav' }));
   }
   // iPhone: que el modo silencio no apague solo una parte del sonido, y reactivar al volver a la app.
   try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) {}
   document.addEventListener('visibilitychange', () => {
     if (!ctx) return;
-    if (document.hidden) { clearInterval(timer); timer = null; }
-    else { ctx.resume(); if (musicOn && !timer) startMusic(); }
+    if (document.hidden) { clearInterval(timer); timer = null; if (keepAlive) keepAlive.pause(); }
+    else { ctx.resume(); if (musicOn && !timer) startMusic(); if (keepAlive) keepAlive.play().catch(() => {}); }
   });
 
   function play(freq, t, dur, { type = 'sine', vol = 0.3, slide = null, dest = master } = {}) {
@@ -200,6 +215,29 @@ const Voice = (() => {
   const norm = (t) => t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9ñ ]/g, '').replace(/\s+/g, ' ').trim();
   const recorded = {};
   (window.FRASES || []).forEach(f => { if (f.file) recorded[norm(f.t)] = 'audio/' + f.file; });
+  // Voz de Sofía pregrabada (tts.js). Así suena aun con el iPhone en modo silencio.
+  const tts = {};
+  Object.entries(window.TTS_FILES || {}).forEach(([k, f]) => { tts[k] = 'audio/tts/' + f; });
+  const fileFor = (t) => recorded[norm(t)] || tts[norm(t)];
+
+  // Un solo reproductor para todas las frases; el iPhone lo deja sonar después del primer toque.
+  const player = new Audio();
+  player.preload = 'auto';
+  let playerReady = false;
+  function playVoice(url) {
+    return new Promise((ok, bad) => {
+      let over = false;
+      const end = () => { if (!over) { over = true; clearTimeout(cap); ok(); } };
+      const fail = () => { if (!over) { over = true; clearTimeout(cap); bad(); } };
+      // Tope por si el aparato nunca avisa que terminó.
+      let cap = setTimeout(end, 15000);
+      player.onended = end;
+      player.onerror = fail;
+      player.onloadedmetadata = () => { if (isFinite(player.duration)) { clearTimeout(cap); cap = setTimeout(end, player.duration * 1000 + 1500); } };
+      player.src = url;
+      player.play().catch(fail);
+    });
+  }
   api.recordedCount = () => Object.keys(recorded).length;
 
   // Dice una o varias frases, una tras otra. Cada frase puede ser texto o {t, pitch, rate, who}
@@ -210,6 +248,7 @@ const Voice = (() => {
     const my = ++seq;
     hush();
     Sound.stopFile();
+    try { player.pause(); } catch (e) {}
     api.speaking = true;
     Sound.duck(true);
     let idx = 0;
@@ -227,10 +266,10 @@ const Voice = (() => {
       // Si la voz se atora, seguir de todos modos para que el juego nunca se quede esperando.
       let moved = false;
       const go = () => { if (!moved) { moved = true; clearTimeout(safety); next(); } };
-      const file = recorded[norm(l.t)];
-      // Las grabaciones avisan solas cuando terminan (ver playFile); este es solo un tope.
+      const file = fileFor(l.t);
+      // Los audios avisan solos cuando terminan (ver playVoice); este es solo un tope.
       const safety = setTimeout(go, file ? 20000 : l.t.length * 110 + 3000);
-      if (file) Sound.playFile(file).then(go, () => speak(l, go));
+      if (file) playVoice(file).then(go, () => speak(l, go));
       else speak(l, go);
     };
     next();
@@ -248,7 +287,8 @@ const Voice = (() => {
     if (wait > 0) { setTimeout(() => speak(l, done), wait); return; }
     if (synth.paused) synth.resume();
     if (!voice) pick();
-    const u = new SpeechSynthesisUtterance(l.t);
+    // Se escribe "Juju" pero se dice "Yuyú".
+    const u = new SpeechSynthesisUtterance(l.t.replace(/\bJuju\b/g, 'Yuyú'));
     u.lang = voice ? voice.lang : 'es-MX';
     if (voice) u.voice = voice;
     u.rate = l.rate || 0.92;
@@ -264,9 +304,15 @@ const Voice = (() => {
   // puede empezar con una voz grabada, se despierta en el primer toque con una frase muda.
   let awake = false;
   api.unlock = () => {
+    // El reproductor de frases se "despierta" tocando un audio mudo dentro del toque.
+    if (!playerReady) {
+      playerReady = true;
+      player.src = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=';
+      player.play().catch(() => { playerReady = false; });
+    }
     if (awake || !synth) return;
     awake = true;
-    try { const u = new SpeechSynthesisUtterance('hola'); u.volume = 0; u.rate = 2; u.lang = 'es-MX'; synth.speak(u); } catch (e) {}
+    try { const u = new SpeechSynthesisUtterance(' '); u.volume = 0; u.lang = 'es-MX'; synth.speak(u); } catch (e) {}
   };
 
   api.stop = () => {
@@ -274,6 +320,7 @@ const Voice = (() => {
     api.speaking = false;
     hush();
     Sound.stopFile();
+    try { player.pause(); } catch (e) {}
     Sound.duck(false);
     if (api.onDone) api.onDone();
   };
