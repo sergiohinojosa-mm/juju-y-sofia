@@ -96,6 +96,11 @@
   // ---------- Guardado (si falla, el juego sigue igual) ----------
   // Perfiles: cada niña tiene su propio avance y su álbum; el personaje siempre es Juju.
   const PROFILES_KEY = 'jujuSofia.perfiles', CURRENT_KEY = 'jujuSofia.actual';
+  // ?reset=todo borra el avance de todas las jugadoras (para empezar pruebas desde cero).
+  if (/[?&]reset=todo/.test(location.search)) {
+    try { Object.keys(localStorage).filter(k => k.startsWith('jujuSofia')).forEach(k => localStorage.removeItem(k)); } catch (e) {}
+    try { history.replaceState(null, '', location.pathname); } catch (e) {}
+  }
   const PROFILE_COLORS = ['#ff5fa2', '#7e57c2', '#26a69a', '#ff9800', '#42a5f5', '#ef5350'];
   const readKey = (k) => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } };
   const writeKey = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
