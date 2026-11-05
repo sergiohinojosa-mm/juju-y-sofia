@@ -93,9 +93,10 @@
       <g pointer-events="none">${Art.leaf(-74, 16, .5, -20, '#43a047')}${Art.leaf(66, 20, .45, 200, '#388e3c')}${Art.flower(-34, 4, FLOWERS[k], 1.7)}${Art.flower(32, 10, FLOWERS[(k + 2) % 5], 1.5)}${Art.flower(-2, 22, FLOWERS[(k + 1) % 5], 1.6)}</g></g>`).join('');
     const spots = [...api.front.querySelectorAll('.fspot')];
     let k = 0;
-    const show = () => { spots[k].querySelector('.plume').innerHTML = `<g transform="translate(0,-36)"><g class="halo"><circle r="64" fill="#fff59d"/></g><g class="pop-in"><g class="wiggle">${Art.feather(0, 0, k % 2 ? 18 : -18, SPOTS[k][2])}</g></g></g>`; };
+    // Ignora una pluma pendiente si ya se tocaron todas (toques muy rápidos).
+    const show = () => { if (k >= SPOTS.length) return; spots[k].querySelector('.plume').innerHTML = `<g transform="translate(0,-36)"><g class="halo"><circle r="64" fill="#fff59d"/></g><g class="pop-in"><g class="wiggle">${Art.feather(0, 0, k % 2 ? 18 : -18, SPOTS[k][2])}</g></g></g>`; };
     spots.forEach((el, j) => api.tap(el, () => {
-      if (j !== k) return;
+      if (j !== k || !el.querySelector('.plume').childNodes.length) return;
       k++;
       el.querySelector('.plume').innerHTML = '';
       sfx('chime');

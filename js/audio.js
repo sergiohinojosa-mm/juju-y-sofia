@@ -131,11 +131,16 @@ const Sound = (() => {
       .then(b => new Promise((ok, bad) => ctx.decodeAudioData(b, ok, bad))));
     load.catch(() => { delete buffers[url]; });
     return load.then(buf => new Promise(done => {
+      stopFile();
       const src = ctx.createBufferSource();
       src.buffer = buf;
       src.connect(master);
-      src.onended = done;
       const [from, to] = voiceSpan(buf);
+      // Termina al acabar el audio o, si el navegador no avisa, poco después de su duración.
+      let ended = false;
+      const end = () => { if (!ended) { ended = true; done(); } };
+      src.onended = end;
+      setTimeout(end, (to - from) * 1000 + 800);
       src.start(0, from, to - from);
       playing = src;
     }));
@@ -222,8 +227,9 @@ const Voice = (() => {
       // Si la voz se atora, seguir de todos modos para que el juego nunca se quede esperando.
       let moved = false;
       const go = () => { if (!moved) { moved = true; clearTimeout(safety); next(); } };
-      const safety = setTimeout(go, l.t.length * 110 + 3000);
       const file = recorded[norm(l.t)];
+      // Las grabaciones avisan solas cuando terminan (ver playFile); este es solo un tope.
+      const safety = setTimeout(go, file ? 20000 : l.t.length * 110 + 3000);
       if (file) Sound.playFile(file).then(go, () => speak(l, go));
       else speak(l, go);
     };
@@ -239,7 +245,8 @@ const Voice = (() => {
     u.rate = l.rate || 0.92;
     u.pitch = l.pitch || 1.08;
     u.onend = done;
-    u.onerror = done;
+    // Si la voz falla, dejar el texto en pantalla el tiempo de leerlo antes de seguir.
+    u.onerror = () => setTimeout(done, l.t.length * 70 + 800);
     synth.speak(u);
   }
 

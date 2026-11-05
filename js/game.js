@@ -174,7 +174,7 @@
   function mk(tag, attrs = {}) { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); return e; }
 
   // Cada escena nueva invalida los temporizadores y animaciones de la anterior.
-  function go(fn, ...args) { token++; Hint.clear(); cleanup.forEach(f => f()); cleanup = []; fn(...args); }
+  function go(fn, ...args) { token++; Voice.stop(); Hint.clear(); cleanup.forEach(f => f()); cleanup = []; fn(...args); }
   function alive() { const t = token; return () => t === token; }
   function later(fn, ms) { const ok = alive(); setTimeout(() => { if (ok()) fn(); }, ms); }
   function say(lines, onEnd) { const ok = alive(); Voice.say(lines, onEnd && (() => { if (ok()) onEnd(); })); }
@@ -382,15 +382,13 @@
       $$('.who').forEach(el => onTap(el, () => {
         useProfile(el.dataset.id);
         Sound.sfx.chime();
-        say(`¡Hola, ${profile().name}!`);
-        later(() => go(cover), 900);
+        go(cover, { greet: `¡Hola, ${profile().name}!` });
       }));
       onTap($('#addWho'), () => {
         const name = (window.prompt('¿Cómo se llama la nueva jugadora?') || '').trim().slice(0, 14);
         if (!name) return;
         useProfile(addProfile(name));
-        say(`¡Hola, ${name}!`);
-        later(() => go(cover), 900);
+        go(cover, { greet: `¡Hola, ${name}!` });
       });
     }
     onTap($('#playBtn'), () => {
@@ -401,6 +399,7 @@
     });
     onTap($('#albumBtn'), () => { Sound.setMusic(state.music); go(album, 'cover'); });
     wireMusic();
+    if (opts.greet) say(opts.greet);
     if (opts.rest) say(['¡A descansar, Juju!', 'Ve a enseñarle tu álbum a mamá Marcela y a papá Checo.', '¡Y salta como ranita! ¡Croac, croac!']);
   }
 
@@ -461,7 +460,8 @@
         ${done ? `<g transform="translate(46,-46)"><circle r="24" fill="#ff5fa2" stroke="#fff" stroke-width="4"/><path d="M0,10 C-18,-4 -12,-20 0,-11 C12,-20 18,-4 0,10 Z" fill="#fff"/></g>` : ''}</g>`;
     });
     // La balsa espera antes de la siguiente parada.
-    const prev = next === null ? STOPS[PLAYABLE - 1] : next === 0 ? [60, 760] : STOPS[next - 1];
+    // Con todas las familias reunidas, la balsa espera entre las dos últimas paradas sin tapar al león.
+    const prev = next === null ? STOPS[PLAYABLE - 2] : next === 0 ? [60, 760] : STOPS[next - 1];
     const goal = next === null ? STOPS[Math.min(PLAYABLE, STOPS.length - 1)] : STOPS[next];
     const rx = (prev[0] + goal[0]) / 2, ry = (prev[1] + goal[1]) / 2 + 10;
     sceneEl.innerHTML = `
@@ -579,6 +579,8 @@
     }
     function frame(now) {
       if (!ok()) return;
+      // La balsa se detiene mientras el teléfono está en vertical o el juego no se ve.
+      if (portrait() || document.hidden) { last = now; raf = requestAnimationFrame(frame); return; }
       const dt = Math.min(.05, (now - last) / 1000);
       last = now;
       t += dt;
@@ -610,8 +612,9 @@
 
     const move = (d) => { const n = Math.max(0, Math.min(2, lane + d)); if (n !== lane) { Sound.sfx[n < lane ? 'raftUp' : 'raftDown'](); lane = n; } };
     const onKey = (e) => {
-      if (e.key === 'ArrowUp' || e.key === 'w') { move(-1); e.preventDefault(); }
-      if (e.key === 'ArrowDown' || e.key === 's') { move(1); e.preventDefault(); }
+      const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+      if (key === 'ArrowUp' || key === 'w') { move(-1); e.preventDefault(); }
+      if (key === 'ArrowDown' || key === 's') { move(1); e.preventDefault(); }
     };
     window.addEventListener('keydown', onKey);
     cleanup.push(() => window.removeEventListener('keydown', onKey));
@@ -1016,8 +1019,7 @@
         cancelHold();
         if (window.confirm(`¿Empezar de nuevo? Se borrará el avance y el álbum de ${profile().name}.`)) {
           resetProfile();
-          say('Listo. ¡Empezamos una nueva aventura!');
-          later(() => go(cover), 1200);
+          go(cover, { greet: 'Listo. ¡Empezamos una nueva aventura!' });
         }
       }, 3000);
     });
@@ -1049,6 +1051,8 @@
   }
 
   // ---------- Arranque ----------
+  // iPhone: evitar que pellizcar haga zoom en la pantalla del juego.
+  document.addEventListener('gesturestart', (e) => e.preventDefault());
   // Sin internet también se puede jugar (en https), y se pide al navegador que no borre el álbum.
   if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
   try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {}
