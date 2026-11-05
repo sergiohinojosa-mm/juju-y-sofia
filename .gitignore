@@ -1,0 +1,6 @@
+# Solo se publica el juego. Documentos internos, audios sin procesar y config local se quedan en la laptop.
+*.md
+wireframes.html
+audios_recibidos/
+.claude/
+.DS_Store
