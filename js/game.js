@@ -114,7 +114,7 @@
   const saveKey = (id) => (id === 'juju' ? 'jujuSofia.v1' : 'jujuSofia.v1.' + id);
   const profile = () => profiles.find(p => p.id === current);
   const profileColor = (p) => PROFILE_COLORS[profiles.indexOf(p) % PROFILE_COLORS.length];
-  const fresh = () => ({ rescued: [], fruits: 0, music: true, introDone: false });
+  const fresh = () => ({ rescued: [], fruits: 0, music: true, introDone: false, finaleDone: false });
   // ?reset=1 borra una sola vez y se quita de la dirección, para que recargar no vuelva a borrar.
   if (/[?&]reset=1/.test(location.search)) {
     try { localStorage.removeItem(saveKey(current)); } catch (e) {}
@@ -132,6 +132,7 @@
           fruits: Number.isFinite(s.fruits) ? Math.min(999, Math.max(0, Math.floor(s.fruits))) : 0,
           music: s.music !== false,
           introDone: s.introDone === true,
+          finaleDone: s.finaleDone === true,
         };
       }
     } catch (e) {}
@@ -518,7 +519,11 @@
       if (opts.intro) lines.push('¡Ahora eres la Rescatadora Principal!');
       if (opts.hello) lines.push('¡Hola de nuevo, Juju!');
       if (next !== null) lines.push(next === 0 ? 'Toca la parada que brilla para subir a la balsa.' : 'Toca la parada que brilla, Juju.');
-      else lines.push('Ya ayudaste a todas las familias de hoy. Puedes ver tu álbum o visitarlas otra vez.');
+      else if (PLAYABLE === LEVELS.length && !state.finaleDone) {
+        // Por si se cerró el juego después de la foto del león: la fiesta todavía espera.
+        say([...lines, '¡Ayudaste a las ocho familias!', '¡Vamos a la fiesta!'], () => later(() => go(finale), 300));
+        return;
+      } else lines.push('Ya ayudaste a todas las familias. Puedes ver tu álbum o visitarlas otra vez.');
       say(lines);
       Hint.set(hintNext);
     }
@@ -609,7 +614,7 @@
         Sound.sfx.win();
         // Parada final: el río sale de la selva y llega a la sabana.
         if (LEVELS[i].id === 'leon') say('¡El río mágico nos llevó hasta la sabana, muy lejos!', () => later(() => go(stop, i), 400));
-        else { say('¡Llegamos!'); later(() => go(stop, i), 1300); }
+        else later(() => go(stop, i), 600);
       }
       raf = requestAnimationFrame(frame);
     }
@@ -683,15 +688,15 @@
       later(() => el.remove(), 650);
       $('#slot' + found).innerHTML = `<g class="pop-in"><g transform="scale(.6)">${Art.clue(L.clue)}</g></g>
         <g transform="translate(36,26)"><circle r="17" fill="#66bb6a" stroke="#fff" stroke-width="4"/><path d="M-7,0 L-2,6 L8,-6" stroke="#fff" stroke-width="4" fill="none" stroke-linecap="round"/></g>`;
-      say(L.clueLines[found]);
       found++;
-      if (found === 3) { phase = 'found'; Hint.clear(); later(reveal, 1700); }
+      if (found === 3) { phase = 'found'; Hint.clear(); say(L.clueLines[2], () => later(reveal, 300)); }
+      else say(L.clueLines[found - 1]);
     }));
 
     function reveal() {
       phase = 'help';
       place(babyEl, L.baby);
-      babyEl.innerHTML = `<g class="pop-in">${Art.animal(L.id, 'sad')}</g>`;
+      babyEl.innerHTML = `<circle cy="-90" r="150" fill="transparent"/><g class="halo"><circle cy="-80" r="140" fill="#fff59d"/></g><g class="pop-in">${Art.animal(L.id, 'sad')}</g>`;
       Sound.sfx[L.sound]();
       // Primero Juju lo calma con un toque suavecito (juego de cuidar).
       phase = 'calm';
@@ -702,7 +707,7 @@
         phase = 'help';
         hearts(babyEl._pos.x, babyEl._pos.y - 60);
         Sound.sfx.chime();
-        say(['¡Suavecito! Ya está más tranquilo.', L.task]);
+        say(['¡Suavecito! Ya se siente mejor.', L.task]);
         L.setup(api);
       });
     }
@@ -743,7 +748,7 @@
     let answered = false;
     say(Q.q);
     const right = layer.querySelector('[data-ok="1"]');
-    Hint.set(() => !answered && { x: 800, y: 470, say: Q.q });
+    Hint.set(() => !answered && { x: +right.getAttribute('transform').match(/\(([\d.]+)/)[1], y: 470, say: Q.q });
     layer.querySelectorAll('.qopt').forEach(el => onTap(el, () => {
       if (answered) return;
       if (el.dataset.ok === '1') {
@@ -788,9 +793,9 @@
         api.later(() => {
           // Sorpresa: sale un arcoíris y la ranita lo usa de tobogán hasta su mamá.
           api.back.querySelector('#rainbow').innerHTML = `<g class="pop-in">${Art.rainbow(1180, 720, 210)}</g>`;
-          api.say(['¡Tres nubes! Una, dos, tres. ¡El charco está lleno!', '¡Un arcoíris! ¡La ranita se va a resbalar hasta su mamá!']);
+          api.say(['¡Tres nubes! Una, dos, tres. ¡El charco está lleno!', '¡Un arcoíris! ¡La ranita se va a resbalar hasta su mamá!'],
+            () => api.moveTo(api.baby, { x: 1280, y: 570 }, 1600, 260, api.reunited));
           api.setArt(api.baby, 'happy');
-          api.later(() => api.moveTo(api.baby, { x: 1280, y: 570 }, 1600, 260, api.reunited), 5200);
         }, 1600);
       }
     }));
@@ -828,8 +833,7 @@
           api.moveTo(api.baby, { x: 1100, y: 330 }, 700, 90, () => {
             api.back.querySelector('#siblings').innerHTML = [1195, 1245].map(x => `<g transform="translate(${x},270) scale(.32)"><g class="pop-in">${Art.toucan('happy')}</g></g>`).join('');
             Sound.sfx.toucan();
-            api.say(['Una, dos, tres, cuatro, cinco flores. ¡Llegó arriba!', '¡Y mira, sus hermanitos! ¡Pío, pío, pío!']);
-            api.later(api.reunited, 5500);
+            api.say(['Una, dos, tres, cuatro, cinco flores. ¡Llegó arriba!', '¡Y mira, sus hermanitos! ¡Pío, pío, pío!'], () => api.later(api.reunited, 300));
           });
         }
       }), 350);
@@ -924,6 +928,7 @@
   // ---------- Final: fiesta con todas las familias, foto de grupo y medalla ----------
   function finale() {
     bubblePos = 'bottom';
+    state.finaleDone = true; save();
     let phase = 'photo';
     const SPOTS = [[180, 300], [490, 290], [800, 280], [1110, 290], [1420, 300], [210, 560], [560, 580], [1430, 570]];
     const colors = ['#ff5fa2', '#ffd23f', '#66bb6a', '#4fc3f7', '#ff8a65', '#ba68c8'];
@@ -1048,9 +1053,11 @@
         ${button('closeBtn', 1500, 110, 'close', '#ef5350', 54)}`;
       const tell = () => { Sound.sfx[L.sound](); say(k === 0 ? [L.name + '.', L.facts[0]] : L.facts[k % L.facts.length]); k++; };
       tell();
-      onTap($('#factBtn'), tell);
-      onTap($('#replayBtn'), () => go(stop, i, { replay: true }));
-      const close = () => { Voice.stop(); $('#modal').innerHTML = ''; };
+      // Un doble toque en la foto no debe cerrarla ni empezar la parada: se ignoran los toques del primer medio segundo.
+      const opened = Date.now(), settled = () => Date.now() - opened > 600;
+      onTap($('#factBtn'), () => { if (settled()) tell(); });
+      onTap($('#replayBtn'), () => { if (settled()) go(stop, i, { replay: true }); });
+      const close = () => { if (!settled()) return; Voice.stop(); $('#modal').innerHTML = ''; };
       onTap($('#closeBtn'), close);
       onTap($('#dim'), close);
     }

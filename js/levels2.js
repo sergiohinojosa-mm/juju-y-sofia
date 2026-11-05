@@ -159,7 +159,7 @@
       if (pushed < n) { api.say(FRIEND[id][0]); glowNext(); return; }
       phase = 'plop';
       api.Hint.clear();
-      api.say(['¡Todos juntos!', '¡Uno, dos, tres…'], plop);
+      api.say(['¡Todos juntos!', '¡Uno, dos, tres!'], plop);
     }));
 
     // ¡PLOP! Sale del lodo y nos salpica. Sorpresa: Juju y Sofía con puntitos de lodo.
