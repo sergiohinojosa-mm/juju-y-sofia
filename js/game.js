@@ -104,10 +104,13 @@
   const PROFILE_COLORS = ['#ff5fa2', '#7e57c2', '#26a69a', '#ff9800', '#42a5f5', '#ef5350'];
   const readKey = (k) => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } };
   const writeKey = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
+  // Perfiles válidos: id sencillo y sin repetir, y nombre que no esté vacío.
   let profiles = readKey(PROFILES_KEY);
-  if (!Array.isArray(profiles) || !profiles.every(p => p && typeof p.id === 'string' && typeof p.name === 'string') || !profiles.length) {
-    profiles = [{ id: 'juju', name: 'Juju' }, { id: 'luciana', name: 'Luciana' }];
-  }
+  profiles = Array.isArray(profiles) ? profiles.filter((p, k, all) => p && typeof p.id === 'string' && /^[\w-]{1,40}$/.test(p.id) &&
+    typeof p.name === 'string' && p.name.trim() && all.findIndex(q => q && q.id === p.id) === k) : [];
+  if (!profiles.length) profiles = [{ id: 'juju', name: 'Juju' }, { id: 'luciana', name: 'Luciana' }];
+  // Primera letra del nombre (completa aunque sea un emoji).
+  const initial = (name) => (Array.from(name.trim())[0] || '?').toUpperCase();
   let current = readKey(CURRENT_KEY);
   if (!profiles.some(p => p.id === current)) current = profiles[0].id;
   // Juju conserva la llave original para no perder lo que ya jugó.
@@ -116,7 +119,7 @@
   const profileColor = (p) => PROFILE_COLORS[profiles.indexOf(p) % PROFILE_COLORS.length];
   const fresh = () => ({ rescued: [], fruits: 0, music: true, introDone: false, finaleDone: false });
   // ?reset=1 borra una sola vez y se quita de la dirección, para que recargar no vuelva a borrar.
-  if (/[?&]reset=1/.test(location.search)) {
+  if (/[?&]reset=1(&|$)/.test(location.search)) {
     try { localStorage.removeItem(saveKey(current)); } catch (e) {}
     try { history.replaceState(null, '', location.pathname); } catch (e) {}
   }
@@ -141,13 +144,16 @@
   // Si el juego está abierto en dos pestañas, se juntan los avances en lugar de que una borre a la otra.
   function save() {
     const disk = readKey(saveKey(current));
-    if (disk && Array.isArray(disk.rescued) && !state._reset) {
+    if (disk && Array.isArray(disk.rescued)) {
       disk.rescued.forEach(id => { if (ALL_IDS.includes(id) && !state.rescued.includes(id)) state.rescued.push(id); });
-      if (Number.isFinite(disk.fruits) && disk.fruits > state.fruits) state.fruits = disk.fruits;
+      if (Number.isFinite(disk.fruits) && disk.fruits > state.fruits) state.fruits = Math.min(999, Math.max(0, Math.floor(disk.fruits)));
     }
-    delete state._reset;
     writeKey(saveKey(current), state);
   }
+  // Si en otra pestaña se reinicia este perfil, esta también empieza de cero (y no lo vuelve a escribir).
+  window.addEventListener('storage', (e) => {
+    if ((e.key === saveKey(current) || e.key === null) && e.newValue === null) useProfile(current);
+  });
   function useProfile(id) {
     current = id;
     writeKey(CURRENT_KEY, id);
@@ -367,7 +373,7 @@
       ${button('albumBtn', 1520, 80, 'album', '#ff9800')}
       ${musicButton(1400, 80)}
       <g id="whoBtn" transform="translate(90,90)"><circle r="58" fill="${profileColor(profile())}" stroke="#fff" stroke-width="6" filter="url(#shadow)"/>
-        <text y="22" text-anchor="middle" font-size="64" font-weight="800" fill="#fff">${esc(profile().name[0].toUpperCase())}</text>
+        <text y="22" text-anchor="middle" font-size="64" font-weight="800" fill="#fff">${esc(initial(profile().name))}</text>
         <text y="100" text-anchor="middle" font-size="30" font-weight="800" fill="#fff" stroke="#1b5e20" stroke-width="7" paint-order="stroke">${esc(profile().name)}</text></g>
       <g id="picker"></g>`;
     onTap($('#whoBtn'), () => openPicker());
@@ -378,7 +384,7 @@
         ${title(800, 200, '¿Quién juega?', 80)}` +
         profiles.map((p, k) => `<g class="who" data-id="${p.id}" transform="translate(${x0 + k * (W + gap)},470)">
           <rect x="${-W / 2}" y="-150" width="${W}" height="300" rx="40" fill="${profileColor(p)}" stroke="${p.id === current ? '#ffd23f' : '#fff'}" stroke-width="${p.id === current ? 14 : 6}" filter="url(#shadow)"/>
-          <text y="30" text-anchor="middle" font-size="140" font-weight="800" fill="#fff">${esc(p.name[0].toUpperCase())}</text>
+          <text y="30" text-anchor="middle" font-size="140" font-weight="800" fill="#fff">${esc(initial(p.name))}</text>
           <text y="115" text-anchor="middle" font-size="42" font-weight="800" fill="#fff">${esc(p.name)}</text></g>`).join('') +
         `<g id="addWho" transform="translate(${x0 + profiles.length * (W + gap)},470)"><rect x="${-W / 2}" y="-150" width="${W}" height="300" rx="40" fill="rgba(255,255,255,.25)" stroke="#fff" stroke-width="6" stroke-dasharray="18 12"/>
           <text y="50" text-anchor="middle" font-size="160" font-weight="800" fill="#fff">+</text></g>`;
