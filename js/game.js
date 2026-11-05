@@ -278,7 +278,7 @@
       $('#musicBtn g g').innerHTML = ICONS[state.music ? 'music' : 'mute'];
     });
   }
-  const title = (x, y, txt, size) => `<text x=""${x}" y="${y}" text-anchor="middle" font-size="${size}" font-weight="800" fill="#fff" stroke="#1b5e20" stroke-width="${Math.round(size / 6)}" paint-order="stroke" stroke-linejoin="round">${txt}</text>`;
+  const title = (x, y, txt, size) => `<text x="${x}" y="${y}" text-anchor="middle" font-size="${size}" font-weight="800" fill="#fff" stroke="#1b5e20" stroke-width="${Math.round(size / 6)}" paint-order="stroke" stroke-linejoin="round">${txt}</text>`;
   const raftArt = (extra = {}) => Art.raft(Object.assign({ gifts: state.rescued, accessory: accessory() }, extra));
 
   // Foto de Polaroid: familia + Juju + Sofía. Centrada en el origen (460x540).
