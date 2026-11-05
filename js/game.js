@@ -275,8 +275,6 @@
     remove() { const s = document.getElementById('sparkle'); if (s) s.remove(); },
   };
   svg.addEventListener('pointerdown', (e) => {
-    Sound.unlock();
-    Voice.unlock();
     if (Hint.target) Hint.reset();
     const p = svgPoint(e);
     const r = mk('circle', { cx: p.x, cy: p.y, r: 40, fill: 'none', stroke: '#fff', 'stroke-width': 8, class: 'ripple' });
@@ -1064,6 +1062,11 @@
   }
 
   // ---------- Arranque ----------
+  // iPhone: el sonido y la voz solo se pueden activar cuando el dedo se levanta (touchend o click),
+  // no al apoyarlo. Se intenta en cada toque hasta que quedan activos.
+  const wake = () => { Sound.unlock(); Voice.unlock(); };
+  document.addEventListener('touchend', wake, { passive: true });
+  document.addEventListener('click', wake, true);
   // iPhone: evitar que pellizcar haga zoom en la pantalla del juego.
   document.addEventListener('gesturestart', (e) => e.preventDefault());
   // Sin internet también se puede jugar (en https), y se pide al navegador que no borre el álbum.

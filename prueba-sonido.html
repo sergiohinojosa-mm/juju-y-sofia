@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prueba de sonido</title>
+<style>
+  :root { --bg: #fff8f0; --ink: #2d2a26; --muted: #7a746b; --card: #fff; --line: #eadfce; --ok: #2e7d32; --bad: #c62828; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #1d1c1a; --ink: #f1ede6; --muted: #a59e93; --card: #2a2825; --line: #4a463f; --ok: #81c784; --bad: #ef9a9a; } }
+  :root[data-theme="dark"] { --bg: #1d1c1a; --ink: #f1ede6; --muted: #a59e93; --card: #2a2825; --line: #4a463f; --ok: #81c784; --bad: #ef9a9a; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 18px/1.45 -apple-system, system-ui, sans-serif; }
+  main { max-width: 560px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1 { font-size: 26px; margin: 0 0 6px; }
+  p { color: var(--muted); margin: 0 0 18px; }
+  button { display: block; width: 100%; min-height: 64px; margin: 0 0 6px; border: 0; border-radius: 16px; font: inherit; font-weight: 700; color: #fff; background: #ff5fa2; cursor: pointer; }
+  .r { min-height: 1.5em; margin: 0 0 16px; font-size: 15px; }
+  .ok { color: var(--ok); } .bad { color: var(--bad); }
+  pre { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px; font-size: 13px; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<main>
+  <h1>🔊 Prueba de sonido</h1>
+  <p>Toca cada botón en orden y fíjate si se oye. Después dime qué número sí sonó y cuál no, o mándame captura de esta pantalla.</p>
+
+  <button id="b1">1 · Tono (efectos del juego)</button><div class="r" id="r1"></div>
+  <button id="b2">2 · Voz de la computadora</button><div class="r" id="r2"></div>
+  <button id="b3">3 · Voz grabada de Marcela</button><div class="r" id="r3"></div>
+  <button id="b4">4 · Voz grabada (otro método)</button><div class="r" id="r4"></div>
+
+  <pre id="info"></pre>
+</main>
+<script>
+const $ = (id) => document.getElementById(id);
+const say = (id, txt, ok) => { $(id).textContent = txt; $(id).className = 'r ' + (ok ? 'ok' : 'bad'); };
+let ctx = null;
+function info() {
+  const vs = window.speechSynthesis ? speechSynthesis.getVoices() : [];
+  $('info').textContent = [
+    'Navegador: ' + navigator.userAgent,
+    'Audio: ' + (ctx ? ctx.state : 'sin crear'),
+    'Voces en español: ' + vs.filter(v => v.lang.toLowerCase().startsWith('es')).map(v => v.name + ' (' + v.lang + ')').join(', '),
+    'Pantalla de inicio: ' + (navigator.standalone ? 'sí' : 'no'),
+  ].join('\n');
+}
+if (window.speechSynthesis) speechSynthesis.onvoiceschanged = info;
+info();
+
+$('b1').onclick = async () => {
+  try {
+    ctx = ctx || new (window.AudioContext || window.webkitAudioContext)();
+    if (ctx.state !== 'running') await ctx.resume();
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.frequency.value = 660; g.gain.value = 0.3;
+    o.connect(g); g.connect(ctx.destination);
+    o.start(); o.stop(ctx.currentTime + 0.6);
+    say('r1', 'Debió sonar un "piii". Estado del audio: ' + ctx.state, ctx.state === 'running');
+  } catch (e) { say('r1', 'Error: ' + e.message, false); }
+  info();
+};
+$('b2').onclick = () => {
+  if (!window.speechSynthesis) { say('r2', 'Este navegador no tiene voz.', false); return; }
+  const u = new SpeechSynthesisUtterance('Hola Juju, soy Sofía. ¿Me escuchas?');
+  const v = speechSynthesis.getVoices().find(v => v.lang === 'es-MX') || speechSynthesis.getVoices().find(v => v.lang.startsWith('es'));
+  if (v) u.voice = v;
+  u.lang = v ? v.lang : 'es-MX';
+  u.onstart = () => say('r2', 'Está hablando con: ' + (v ? v.name : 'voz por defecto'), true);
+  u.onerror = (e) => say('r2', 'La voz falló: ' + e.error, false);
+  speechSynthesis.cancel();
+  speechSynthesis.speak(u);
+  setTimeout(() => { if (!$('r2').textContent) say('r2', 'La voz no arrancó en 3 segundos.', false); }, 3000);
+};
+$('b3').onclick = async () => {
+  try {
+    ctx = ctx || new (window.AudioContext || window.webkitAudioContext)();
+    if (ctx.state !== 'running') await ctx.resume();
+    const buf = await fetch('audio/S060.m4a').then(r => r.arrayBuffer()).then(b => new Promise((ok, bad) => ctx.decodeAudioData(b, ok, bad)));
+    const src = ctx.createBufferSource();
+    src.buffer = buf; src.connect(ctx.destination); src.start();
+    say('r3', 'Debió decir "¿Nos ayudas a buscarlos?" (' + buf.duration.toFixed(1) + ' s)', ctx.state === 'running');
+  } catch (e) { say('r3', 'Error: ' + (e && e.message || e), false); }
+  info();
+};
+$('b4').onclick = () => {
+  const a = new Audio('audio/S060.m4a');
+  a.play().then(() => say('r4', 'Sonando con el reproductor normal.', true)).catch(e => say('r4', 'Error: ' + e.message, false));
+};
+</script>
+</body>
+</html>
