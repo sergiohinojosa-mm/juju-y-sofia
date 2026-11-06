@@ -214,8 +214,12 @@
       const [x, y] = T[j];
       api.countPop(k, x, y - 190);
       api.setArt(api.baby, 'happy');
-      if (k < T.length) api.say(k === 1 ? '¡Una tortuga! ¡Brinca, cachorro!' : `¡${api.NUM[k]} tortuguitas!`);
-      api.moveTo(api.baby, { x, y: y - 48 }, 700, 90, () => (k === 2 ? sneeze(t) : next()));
+      // Antes del estornudo se espera a que terminen la frase y el brinco.
+      let both = 0;
+      const waitSay = k === 2 && k < T.length;
+      const after = () => { if (++both === (waitSay ? 2 : 1)) (k === 2 ? sneeze(t) : next()); };
+      if (k < T.length) api.say(k === 1 ? '¡Una tortuga! ¡Brinca, cachorro!' : `¡${api.NUM[k]} tortuguitas!`, waitSay ? after : undefined);
+      api.moveTo(api.baby, { x, y: y - 48 }, 700, 90, after);
     }));
     function next() {
       if (k < T.length) { phase = 'bridge'; rise(); api.Hint.restart(); return; }

@@ -267,7 +267,8 @@
       if (!this.target) return;
       if (Voice.speaking || portrait() || document.hidden) { this.timer = setTimeout(() => this.fire(), 2000); return; }
       const t = this.target();
-      if (!t) return;
+      // Después de tres avisos con la manita ya no insiste.
+      if (!t || this.level >= 4) return;
       this.remove();
       this.level++;
       const g = mk('g', { id: 'sparkle', 'pointer-events': 'none' });
@@ -871,16 +872,20 @@
       phase = 'climb';
       bundle.remove();
       Hint.clear();
-      api.say('¡Tres! ¡Ya llegó! Sube, perezosito, despacito.');
-      api.setArt(api.baby, 'happy');
-      api.later(() => api.moveTo(api.baby, { x: X - 10, y: TOP - 8 }, 2600, 0, () => {
+      // La mamá habla cuando terminan la frase y la subida (lo que tarde más).
+      let climbed = 0;
+      const both = (fn) => () => { if (++climbed === 2) fn(); };
+      const momComes = both(() => {
         // Sorpresa: mamá perezoso tarda y tarda. Juju la toca para animarla.
         phase = 'slow';
         Sound.sfx.sloth();
         api.say(['¡Ahí viene su mamá!', { t: '¡Yaaa voooy!', pitch: .6, rate: .7, who: 'perezoso' }, 'Mamá es muy lenta. ¡Tócala para animarla!']);
         api.mom.firstChild.setAttribute('class', 'pulse');
         api.hint(() => phase === 'slow' && { x: api.mom._pos.x, y: api.mom._pos.y - 90, say: 'Toca a mamá perezoso, Juju.' });
-      }), 400);
+      });
+      api.say('¡Tres! ¡Ya llegó! Sube, perezosito, despacito.', momComes);
+      api.setArt(api.baby, 'happy');
+      api.later(() => api.moveTo(api.baby, { x: X - 10, y: TOP - 8 }, 2600, 0, momComes), 400);
     });
     api.tap(api.mom, () => {
       if (phase !== 'slow') return;
@@ -937,7 +942,6 @@
   // ---------- Final: fiesta con todas las familias, foto de grupo y medalla ----------
   function finale() {
     bubblePos = 'bottom';
-    state.finaleDone = true; save();
     let phase = 'photo';
     const SPOTS = [[180, 300], [490, 290], [800, 280], [1110, 290], [1420, 300], [210, 560], [560, 580], [1430, 570]];
     const colors = ['#ff5fa2', '#ffd23f', '#66bb6a', '#4fc3f7', '#ff8a65', '#ba68c8'];
@@ -984,6 +988,7 @@
       onTap($('#medalBtn'), () => {
         if (phase !== 'medal') return;
         phase = 'done';
+        state.finaleDone = true; save();
         Hint.clear();
         Sound.sfx.win(); confetti();
         $('#fBtn').innerHTML = '';

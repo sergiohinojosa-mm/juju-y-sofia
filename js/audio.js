@@ -216,7 +216,9 @@ const Voice = (() => {
   // las demás, con la voz del navegador.
   const norm = (t) => t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9ñ ]/g, '').replace(/\s+/g, ' ').trim();
   const recorded = {};
-  (window.FRASES || []).forEach(f => { if (f.file) recorded[norm(f.t)] = 'audio/' + f.file; });
+  // Las grabaciones llevan la versión del juego, para que el iPhone baje las nuevas al regrabar.
+  const VER = (document.currentScript && document.currentScript.src.split('?')[1]) || '';
+  (window.FRASES || []).forEach(f => { if (f.file) recorded[norm(f.t)] = 'audio/' + f.file + (VER ? '?' + VER : ''); });
   // Voz de Sofía pregrabada (tts.js). Así suena aun con el iPhone en modo silencio.
   const tts = {};
   Object.entries(window.TTS_FILES || {}).forEach(([k, f]) => { tts[norm(k)] = 'audio/tts/' + f; });
