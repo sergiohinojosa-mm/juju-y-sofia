@@ -18,7 +18,7 @@
       ['¡Una ranita!', `<g transform="translate(0,40) scale(.4)">${Art.animal('rana')}</g>`],
     ];
     api.front.innerHTML = BUSH.map(([x, y], k) => `<g class="mbush" data-k="${k}" transform="translate(${x},${y})">
-      <circle cy="-60" r="95" fill="transparent"/><g class="halo"><circle cy="-50" r="96" fill="#fff59d"/></g><g class="pop-in"><g class="bush-art">${Art.bush(0, 0, 1.1, ['#43a047', '#4caf50', '#388e3c'][k])}</g></g>
+      <circle cy="-60" r="95" fill="transparent"/>${Art.halo(100, { cy: -50 })}<g class="pop-in"><g class="bush-art">${Art.bush(0, 0, 1.1, ['#43a047', '#4caf50', '#388e3c'][k])}</g></g>
       <g class="tail" pointer-events="none"></g></g>`).join('');
     const bushes = [...api.front.querySelectorAll('.mbush')];
     let round = 0, phase = 'hide', other = 0;
@@ -54,6 +54,7 @@
       }
       // ¡Lo encontró!
       phase = 'found';
+      if (api.burst) api.burst(x, y - 80, 1.2);
       round++;
       b.querySelector('.tail').innerHTML = '';
       sfx('monkey');
@@ -94,7 +95,7 @@
     const spots = [...api.front.querySelectorAll('.fspot')];
     let k = 0;
     // Ignora una pluma pendiente si ya se tocaron todas (toques muy rápidos).
-    const show = () => { if (k >= SPOTS.length) return; spots[k].querySelector('.plume').innerHTML = `<g transform="translate(0,-36)"><g class="halo"><circle r="64" fill="#fff59d"/></g><g class="pop-in"><g class="wiggle">${Art.feather(0, 0, k % 2 ? 18 : -18, SPOTS[k][2])}</g></g></g>`; };
+    const show = () => { if (k >= SPOTS.length) return; spots[k].querySelector('.plume').innerHTML = `<g transform="translate(0,-36)">${Art.halo(70)}<g class="pop-in"><g class="wiggle"><g class="idle">${Art.feather(0, 0, k % 2 ? 18 : -18, SPOTS[k][2])}</g></g></g></g>`; };
     spots.forEach((el, j) => api.tap(el, () => {
       if (j !== k || !el.querySelector('.plume').childNodes.length) return;
       k++;
@@ -142,7 +143,12 @@
     api.baby.firstChild.setAttribute('class', '');
     let pushed = 0, phase = 'push';
     const nextFriend = () => friends.find(f => !f.dataset.done);
-    const glowNext = () => { const f = nextFriend(); if (f && phase === 'push') f.querySelector('.fr-art').setAttribute('class', 'fr-art pulse'); };
+    const glowNext = () => {
+      const f = nextFriend();
+      if (!f || phase !== 'push') return;
+      f.querySelector('.fr-art').setAttribute('class', 'fr-art pulse');
+      if (!f.querySelector('.halo')) f.insertAdjacentHTML('afterbegin', Art.halo(66, { cy: -45 }));
+    };
     api.later(glowNext, n * 350 + 700);
     friends.forEach(f => api.tap(f, () => {
       if (phase !== 'push' || f.dataset.done) return;
@@ -151,6 +157,8 @@
       const j = +f.dataset.j, id = ids[j];
       friends.forEach(o => { if (!o.dataset.done) o.querySelector('.fr-art').setAttribute('class', 'fr-art'); });
       const art = f.querySelector('.fr-art');
+      const fh = f.querySelector('.halo');
+      if (fh) fh.remove();
       art.setAttribute('class', 'fr-art');
       bump(art, 'wobble');
       bump(api.baby.firstChild, 'loosen');
@@ -193,7 +201,7 @@
   function setupJaguar(api) {
     const T = [[480, 676], [650, 682], [820, 676], [990, 682]];
     api.back.innerHTML = T.map(([x, y], k) => `<g class="turtle" data-k="${k}" transform="translate(${x},${y})" style="display:none">
-      <circle cy="-24" r="75" fill="transparent"/><g class="halo"><circle cy="-24" r="78" fill="#fff59d"/></g><g class="pop-in"><g class="t-art pulse">${Art.turtle('happy')}</g></g><g class="t-bub" pointer-events="none"></g></g>`).join('');
+      <circle cy="-24" r="75" fill="transparent"/>${Art.halo(84, { cy: -24 })}<g class="pop-in"><g class="t-art pulse">${Art.turtle('happy')}</g></g><g class="t-bub" pointer-events="none"></g></g>`).join('');
     const turtles = [...api.back.querySelectorAll('.turtle')];
     let k = 0, phase = 'bridge';
     // La tortuga asoma con burbujitas.
@@ -253,7 +261,7 @@
     let k = 0, phase = 'run';
     const wiggle = (j) => {
       clumps[j].querySelector('.c-art').setAttribute('class', 'c-art wiggle');
-      clumps[j].insertAdjacentHTML('afterbegin', '<g class="halo"><circle cy="-75" r="84" fill="#fff59d"/></g>');
+      clumps[j].insertAdjacentHTML('afterbegin', Art.halo(108, { cy: -75 }));
     };
 
     // Pasa una mariposa y el cachorro se va brincando tras ella hasta el pasto alto.

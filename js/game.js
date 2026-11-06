@@ -205,6 +205,7 @@
       Sound.unlock();
       Voice.unlock();
       Sound.sfx.tap();
+      squish(el);
       fn(e);
     });
   }
@@ -218,6 +219,22 @@
     return lines;
   }
   function restart(el, cls) { el.classList.remove(cls); el.getBoundingClientRect(); el.classList.add(cls); }
+  // Aplastadita elástica al tocar algo (squash & stretch). Se agrega una escala al final de la posición
+  // y se quita sola; si otra animación mueve la figura mientras tanto, se hace a un lado.
+  function squish(el) {
+    const base = el.getAttribute('transform');
+    if (!base || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const t0 = performance.now(), D = 420;
+    let mine = base;
+    const step = (now) => {
+      if (el.getAttribute('transform') !== mine) return;
+      const u = Math.min(1, (now - t0) / D), k = Math.sin(u * Math.PI * 2.5) * (1 - u) * .16;
+      mine = u < 1 ? `${base} scale(${(1 + k).toFixed(3)},${(1 - k).toFixed(3)})` : base;
+      el.setAttribute('transform', mine);
+      if (u < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }
 
   // Posición y animación de figuras (atributo transform = posición; nunca lleva clase animada).
   function place(el, p) { el._pos = Object.assign({ s: 1 }, p); el.setAttribute('transform', `translate(${p.x},${p.y}) scale(${p.s ?? 1})`); }
@@ -274,9 +291,10 @@
       this.remove();
       this.level++;
       const g = mk('g', { id: 'sparkle', 'pointer-events': 'none' });
-      let s = [[0, -80], [70, -20], [-70, -10], [40, 60], [-45, 60]].map(([dx, dy], k) =>
-        `<g transform="translate(${t.x + dx},${t.y + dy})"><path class="sparkle" style="animation-delay:${k * .15}s" d="M0,-24 L7,-7 L24,0 L7,7 L0,24 L-7,7 L-24,0 L-7,-7 Z" fill="#fff59d" stroke="#ffb300" stroke-width="3"/></g>`).join('');
-      if (this.level >= 2) s += `<g transform="translate(${t.x + 20},${t.y + 40})"><g class="pulse"><text font-size="100">👆</text></g></g>`;
+      let s = [[0, -84, 26], [74, -22, 20], [-74, -12, 22], [44, 62, 17], [-48, 62, 19]].map(([dx, dy, r], k) =>
+        `<g transform="translate(${t.x + dx},${t.y + dy})">${Art.star4(r, 'sparkle', `animation-delay:${k * .15}s`)}</g>`).join('');
+      // Manita dibujada que toca justo encima del objetivo, con una ondita en la punta del dedo.
+      if (this.level >= 2) s += `<g transform="translate(${t.x + 12},${t.y + 8})"><circle class="tap-ring" r="46" fill="none" stroke="#fff" stroke-width="8"/><g class="hand-tap">${Art.hand()}</g></g>`;
       g.innerHTML = s;
       sceneEl.appendChild(g);
       Sound.sfx.sparkle();
@@ -287,28 +305,48 @@
   svg.addEventListener('pointerdown', (e) => {
     if (Hint.target) Hint.reset();
     const p = svgPoint(e);
-    const r = mk('circle', { cx: p.x, cy: p.y, r: 40, fill: 'none', stroke: '#fff', 'stroke-width': 8, class: 'ripple' });
+    // Ondita y chispitas donde toca el dedo.
+    const r = mk('g', { transform: `translate(${p.x.toFixed(0)},${p.y.toFixed(0)})`, 'pointer-events': 'none' });
+    r.innerHTML = `<circle class="ripple" r="40" fill="none" stroke="#fff" stroke-width="8"/>` +
+      [0, 60, 120, 180, 240, 300].map((a, k) => `<g transform="rotate(${a})"><circle class="tap-p" r="${k % 2 ? 5 : 7}" fill="${['#fff59d', '#fff', '#ffd6e9'][k % 3]}"/></g>`).join('');
     sceneEl.appendChild(r);
     setTimeout(() => r.remove(), 550);
   });
 
   // ---------- Efectos ----------
-  function flash() { const r = mk('rect', { x: -400, y: -200, width: 2400, height: 1300, fill: '#fff', class: 'flash' }); sceneEl.appendChild(r); setTimeout(() => r.remove(), 500); }
+  // Flash de cámara: luz blanca cálida con las esquinas un poquito doradas.
+  function flash() { const r = mk('rect', { x: -400, y: -200, width: 2400, height: 1300, fill: 'url(#flashG)', class: 'flash' }); sceneEl.appendChild(r); setTimeout(() => r.remove(), 500); }
+  // Estallido de festejo (anillo + chispas + estrellitas) en un punto del escenario.
+  function burst(x, y, size = 1) {
+    const g = mk('g', { 'pointer-events': 'none', transform: `translate(${Math.round(x)},${Math.round(y)})` });
+    g.innerHTML = Art.burst(size);
+    sceneEl.appendChild(g);
+    setTimeout(() => g.remove(), 900);
+  }
+  // Confeti de papelitos, listones y estrellitas que giran mientras caen.
   function confetti() {
     const g = mk('g', { 'pointer-events': 'none' });
     const colors = ['#ff5fa2', '#ffd23f', '#66bb6a', '#4fc3f7', '#ff8a65', '#ba68c8'];
+    const shape = (i, c) => i % 5 === 4 ? `<path d="${Art.starPath(14)}" fill="${c}" stroke="#fff" stroke-width="2"/>`
+      : i % 5 === 3 ? `<path d="M0,0 q8,-8 0,-16 q-8,-8 0,-16" stroke="${c}" stroke-width="7" fill="none" stroke-linecap="round"/>`
+      : i % 5 === 2 ? `<circle r="10" fill="${c}"/><circle cx="-3" cy="-3" r="3.5" fill="#fff" opacity=".6"/>`
+      : `<rect x="-9" y="-13" width="18" height="26" rx="4" fill="${c}"/><rect x="-9" y="-13" width="18" height="8" rx="4" fill="#fff" opacity=".35"/>`;
     let s = '';
-    for (let i = 0; i < 40; i++) {
+    for (let i = 0; i < 44; i++) {
       const dx = Math.round(Math.random() * 300 - 150);
-      s += `<g transform="translate(${Math.round(Math.random() * 1600)},-40)"><rect class="confetti" style="--dx:${dx}px;animation-delay:${(Math.random() * .6).toFixed(2)}s" width="18" height="26" rx="4" fill="${colors[i % 6]}"/></g>`;
+      s += `<g transform="translate(${Math.round(Math.random() * 1600)},-40)"><g class="confetti" style="--dx:${dx}px;animation-delay:${(Math.random() * .7).toFixed(2)}s"><g class="flutter" style="animation-delay:${(Math.random() * .5).toFixed(2)}s">${shape(i, colors[i % 6])}</g></g></g>`;
     }
     g.innerHTML = s;
     sceneEl.appendChild(g);
-    setTimeout(() => g.remove(), 3300);
+    setTimeout(() => g.remove(), 3400);
   }
+  // Corazones con volumen y brillo, con estrellitas entre ellos.
+  const HEART = 'M0,12 C-30,-10 -20,-36 0,-22 C20,-36 30,-10 0,12 Z';
   function hearts(x, y) {
     const g = mk('g', { 'pointer-events': 'none' });
-    g.innerHTML = [-90, -30, 30, 90, 0].map((dx, k) => `<g transform="translate(${x + dx},${y - 40 - (k % 2) * 30})"><path class="heart-up" style="animation-delay:${k * .18}s" d="M0,12 C-30,-10 -20,-36 0,-22 C20,-36 30,-10 0,12 Z" fill="#ff5fa2"/></g>`).join('');
+    g.innerHTML = [-90, -30, 30, 90, 0].map((dx, k) => `<g transform="translate(${x + dx},${y - 40 - (k % 2) * 30})"><g class="heart-up" style="animation-delay:${k * .18}s">
+      <path d="${HEART}" fill="url(#heartG)" stroke="#fff" stroke-width="3"/><ellipse cx="-10" cy="-16" rx="6" ry="4" fill="#fff" opacity=".7" transform="rotate(-30 -10 -16)"/></g></g>`).join('') +
+      [[-60, -110], [60, -130], [0, -170]].map(([dx, dy], k) => `<g transform="translate(${x + dx},${y + dy})">${Art.star4(14, 'heart-up', `animation-delay:${.3 + k * .2}s`)}</g>`).join('');
     sceneEl.appendChild(g);
     setTimeout(() => g.remove(), 2800);
   }
@@ -318,25 +356,44 @@
   const NUM_M = ['', 'Uno', 'Dos', 'Tres', 'Cuatro', 'Cinco'];
   function countPop(n, x, y) {
     const g = mk('g', { 'pointer-events': 'none', transform: `translate(${x},${y})` });
-    g.innerHTML = `<text class="num-pop" text-anchor="middle" font-size="150" font-weight="700" fill="#ffd23f" stroke="#5d4037" stroke-width="14" paint-order="stroke">${n}</text>`;
+    g.innerHTML = `<g transform="translate(0,-50)">${Art.burst(.9)}</g><g class="num-pop"><text y="8" text-anchor="middle" font-size="150" font-weight="800" fill="#3e2723" opacity=".25">${n}</text>
+      <text text-anchor="middle" font-size="150" font-weight="800" fill="url(#numG)" stroke="#5d4037" stroke-width="14" paint-order="stroke" stroke-linejoin="round">${n}</text>
+      <text text-anchor="middle" font-size="150" font-weight="800" fill="none" stroke="#fff" stroke-width="3" opacity=".7">${n}</text></g>`;
     sceneEl.appendChild(g);
     setTimeout(() => g.remove(), 1200);
   }
 
   // ---------- Botones ----------
   const ICONS = {
-    home: '<path d="M-30,4 L0,-26 L30,4 L22,4 L22,28 L-22,28 L-22,4 Z" fill="#fff"/>',
-    album: '<path d="M-32,-24 Q-16,-32 0,-22 Q16,-32 32,-24 L32,28 Q16,20 0,30 Q-16,20 -32,28 Z" fill="#fff"/><path d="M0,-22 L0,30" stroke="#ff5fa2" stroke-width="4"/>',
-    music: '<path d="M-8,18 L-8,-26 L24,-34 L24,10" stroke="#fff" stroke-width="7" fill="none" stroke-linejoin="round"/><ellipse cx="-16" cy="20" rx="12" ry="9" fill="#fff"/><ellipse cx="16" cy="12" rx="12" ry="9" fill="#fff"/>',
-    up: '<path d="M0,-28 L30,18 L-30,18 Z" fill="#fff"/>',
-    down: '<path d="M0,28 L30,-18 L-30,-18 Z" fill="#fff"/>',
-    close: '<path d="M-20,-20 L20,20 M20,-20 L-20,20" stroke="#fff" stroke-width="10" stroke-linecap="round"/>',
-    camera: '<rect x="-40" y="-24" width="80" height="54" rx="12" fill="#fff"/><rect x="-16" y="-36" width="32" height="16" rx="5" fill="#fff"/><circle cx="0" cy="3" r="18" fill="#ff5fa2"/><circle cx="0" cy="3" r="9" fill="#ffd6e9"/>',
+    home: '<path d="M-32,6 L0,-28 L32,6" stroke="#fff" stroke-width="9" fill="none" stroke-linecap="round" stroke-linejoin="round"/><rect x="14" y="-26" width="9" height="18" rx="2" fill="#fff"/><path d="M-22,0 L0,-22 L22,0 L22,26 Q22,30 18,30 L-18,30 Q-22,30 -22,26 Z" fill="#fff"/><rect x="-8" y="8" width="16" height="22" rx="6" fill="#ffb74d"/><circle cx="4" cy="20" r="1.8" fill="#8d5a2b"/>',
+    album: '<path d="M-32,-24 Q-16,-32 0,-22 Q16,-32 32,-24 L32,28 Q16,20 0,30 Q-16,20 -32,28 Z" fill="#fff"/><path d="M-26,-16 Q-14,-22 -4,-15 L-4,20 Q-14,14 -26,19 Z" fill="#ffe0ef"/><path d="M0,-22 L0,30" stroke="#ff5fa2" stroke-width="4"/><path d="M14,-14 C10,-19 4,-16 8,-10 L14,-4 L20,-10 C24,-16 18,-19 14,-14 Z" fill="#ff5fa2"/><path d="M6,6 L24,4 M6,14 L24,12" stroke="#ffb3d1" stroke-width="3" stroke-linecap="round"/>',
+    music: '<path d="M-8,18 L-8,-26 L24,-34 L24,10" stroke="#fff" stroke-width="7" fill="none" stroke-linejoin="round"/><path d="M-8,-18 L24,-26" stroke="#fff" stroke-width="7"/><ellipse cx="-16" cy="20" rx="12" ry="9" fill="#fff" transform="rotate(-15 -16 20)"/><ellipse cx="16" cy="12" rx="12" ry="9" fill="#fff" transform="rotate(-15 16 12)"/>',
+    up: '<path d="M0,-28 L30,16 Q32,20 27,20 L-27,20 Q-32,20 -30,16 Z" fill="#fff" stroke="#fff" stroke-width="6" stroke-linejoin="round"/>',
+    down: '<path d="M0,28 L30,-16 Q32,-20 27,-20 L-27,-20 Q-32,-20 -30,-16 Z" fill="#fff" stroke="#fff" stroke-width="6" stroke-linejoin="round"/>',
+    close: '<path d="M-20,-20 L20,20 M20,-20 L-20,20" stroke="#fff" stroke-width="11" stroke-linecap="round"/>',
+    // Cámara mágica: cuerpo con relieve, lente de vidrio con reflejos, flash y botón.
+    camera: '<rect x="-24" y="-38" width="30" height="16" rx="5" fill="#fff"/><rect x="16" y="-34" width="16" height="10" rx="3" fill="#fff59d" stroke="#fff" stroke-width="2"/>' +
+      '<rect x="-42" y="-26" width="84" height="58" rx="14" fill="#fff"/><rect x="-42" y="-26" width="84" height="14" rx="7" fill="#ffe0ef"/><rect x="-42" y="18" width="84" height="14" rx="7" fill="#f3d4e2" opacity=".7"/>' +
+      '<circle cx="0" cy="4" r="22" fill="#ad1457"/><circle cx="0" cy="4" r="17" fill="#ff5fa2"/><circle cx="0" cy="4" r="10" fill="#4a148c"/>' +
+      '<circle cx="-5" cy="-1" r="4.5" fill="#fff" opacity=".9"/><circle cx="5" cy="9" r="2" fill="#fff" opacity=".7"/><circle cx="-31" cy="-14" r="4" fill="#ff5fa2"/>',
   };
   ICONS.mute = ICONS.music + '<path d="M-34,-34 L34,34" stroke="#ff5252" stroke-width="8" stroke-linecap="round"/>';
   const emojiIcon = (e, size = 60) => `<text y="${size * .35}" text-anchor="middle" font-size="${size}">${e}</text>`;
-  const button = (id, x, y, icon, fill = '#66bb6a', r = 54, cls = '') =>
-    `<g id="${id}" transform="translate(${x},${y})"><g class="${cls}"><circle r="${r}" fill="${fill}" stroke="#fff" stroke-width="6" filter="url(#shadow)"/><circle r="${r - 3}" fill="url(#shade)"/><ellipse cy="${(-r * .45).toFixed(1)}" rx="${(r * .62).toFixed(1)}" ry="${(r * .32).toFixed(1)}" fill="url(#gloss)"/><g transform="scale(${(r / 54).toFixed(2)})">${ICONS[icon] || emojiIcon(icon)}</g></g></g>`;
+  // Color más oscuro del mismo tono (para el borde de abajo que da relieve).
+  const darker = (hex, k = .72) => '#' + [1, 3, 5].map(i => Math.round(parseInt(hex.slice(i, i + 2), 16) * k).toString(16).padStart(2, '0')).join('');
+  // Botón redondo con relieve: base oscura abajo, borde blanco, luz arriba, sombra suave y el dibujo con sombrita.
+  // El primer <g> dentro del botón es el del ícono (la música lo cambia con '#musicBtn g g').
+  const button = (id, x, y, icon, fill = '#66bb6a', r = 54, cls = '') => {
+    const d = /^#[0-9a-f]{6}$/i.test(fill) ? darker(fill) : fill;
+    return `<g id="${id}" transform="translate(${x},${y})"><g class="${cls}">` +
+      `<ellipse cy="${(r * .92).toFixed(1)}" rx="${(r * .9).toFixed(1)}" ry="${(r * .2).toFixed(1)}" fill="#0b3016" opacity=".22"/>` +
+      `<circle cy="${(r * .1).toFixed(1)}" r="${r + 3}" fill="${d}"/>` +
+      `<circle r="${r}" fill="${fill}" stroke="#fff" stroke-width="6"/><circle r="${r - 3}" fill="url(#shade)"/>` +
+      `<path d="M${(-r * .78).toFixed(1)},${(r * .3).toFixed(1)} A${(r * .82).toFixed(1)},${(r * .82).toFixed(1)} 0 0 0 ${(r * .78).toFixed(1)},${(r * .3).toFixed(1)}" stroke="${d}" stroke-width="${(r * .08).toFixed(1)}" fill="none" stroke-linecap="round" opacity=".45"/>` +
+      `<ellipse cy="${(-r * .45).toFixed(1)}" rx="${(r * .62).toFixed(1)}" ry="${(r * .32).toFixed(1)}" fill="url(#gloss)"/>` +
+      `<circle cx="${(-r * .5).toFixed(1)}" cy="${(-r * .5).toFixed(1)}" r="${(r * .07).toFixed(1)}" fill="#fff" opacity=".85"/>` +
+      `<g transform="scale(${(r / 54).toFixed(2)})" filter="url(#iconShadow)">${ICONS[icon] || emojiIcon(icon)}</g></g></g>`;
+  };
   const musicButton = (x = 1400, y = 80) => button('musicBtn', x, y, state.music ? 'music' : 'mute', '#26a69a');
   function wireMusic() {
     onTap($('#musicBtn'), () => {
@@ -350,16 +407,25 @@
 
   // Foto de Polaroid: familia + Juju + Sofía. Centrada en el origen (460x540).
   function polaroid(L) {
-    return `<rect x="-230" y="-270" width="460" height="540" rx="14" fill="#fff" filter="url(#shadow)"/>
+    return `<rect x="-226" y="-262" width="460" height="540" rx="14" fill="#3e2a12" opacity=".18"/>
+      <rect x="-230" y="-270" width="460" height="540" rx="14" fill="url(#paper)" filter="url(#shadow)"/>
+      <rect x="-230" y="-270" width="460" height="540" rx="14" fill="none" stroke="#fff" stroke-width="3" opacity=".9"/>
       <rect x="-200" y="-240" width="400" height="400" fill="url(#photoSky)"/><circle cx="140" cy="-190" r="90" fill="url(#sunGlow)"/>
+      <path d="M-200,-120 C-150,-150 -110,-110 -60,-130 C-20,-146 20,-120 60,-128 L60,-240 L-200,-240 Z" fill="#fff" opacity=".18"/>
       <path d="M-200,90 C-100,70 60,96 200,74 L200,160 L-200,160 Z" fill="url(#grass)"/>
+      <path d="M-200,98 C-100,78 60,104 200,82" stroke="#b9f6a8" stroke-width="4" fill="none" opacity=".7"/>
       <rect x="-200" y="-240" width="400" height="400" fill="url(#shade)" opacity=".5"/>
       <g transform="translate(-160,150) scale(.4)">${Art.juju({ accessory: accessory() })}</g>
       <g transform="translate(165,150) scale(.4)">${Art.sofia({ cheer: true })}</g>
       <g transform="translate(0,40)">${Art.family(L.id, 230)}</g>
-      <path d="M-20,-190 C-50,-215 -40,-240 -20,-226 C0,-240 10,-215 -20,-190 Z" fill="#ff5fa2"/>
+      <path d="M-20,-190 C-50,-215 -40,-240 -20,-226 C0,-240 10,-215 -20,-190 Z" fill="url(#heartG)" stroke="#fff" stroke-width="3"/>
+      <rect x="-200" y="-240" width="400" height="400" fill="url(#sheen)" opacity=".8"/>
+      <rect x="-200" y="-240" width="400" height="400" fill="none" stroke="#3e2a12" stroke-width="3" opacity=".18"/>
       <text y="225" text-anchor="middle" font-size="34" font-weight="800" fill="#5d4037">${L.name}</text>
-      <rect x="-70" y="-290" width="140" height="42" rx="6" fill="#ffd6e9" opacity=".85" transform="rotate(-4)"/>`;
+      <path d="M-120,242 Q0,252 120,242" stroke="#ffb3d1" stroke-width="4" fill="none" stroke-linecap="round" opacity=".8"/>
+      <g transform="rotate(-4)"><rect x="-70" y="-290" width="140" height="42" rx="6" fill="#ffd6e9" opacity=".85"/>
+        <path d="M-50,-290 L-62,-248 M-20,-290 L-32,-248 M10,-290 L-2,-248 M40,-290 L28,-248 M70,-288 L58,-248" stroke="#fff" stroke-width="7" opacity=".45"/>
+        <path d="M-70,-290 l6,6 l-6,6 l6,6 l-6,6 l6,6 l-6,6 M70,-290 l-6,6 l6,6 l-6,6 l6,6 l-6,6 l6,6" stroke="#fff" stroke-width="2" fill="none" opacity=".7"/></g>`;
   }
 
   // ================= ESCENAS =================
@@ -553,7 +619,6 @@
     bubblePos = 'top';
     // La balsa crece con cada familia: se recorre a la derecha y atrapa frutas en todo su largo.
     const LANES = [500, 630, 760], RAFT_X = 370, DURATION = 32, SPEED = 420, HALF = Math.max(160, (420 + state.rescued.length * 74) * .72 / 2 * .8);
-    const FRUITS = ['🍓', '🍌', '🥭', '🍊', '🍇'];
     const tile = (ox) => [80, 330, 560, 820, 1080, 1330].map(x => Art.tree(x + ox, 430, .45)).join('') + Art.bush(200 + ox, 430, .6) + Art.bush(950 + ox, 430, .6);
     const waves = Array.from({ length: 4 }, (_, r) => Array.from({ length: 10 }, (_, c) => `<path d="M${c * 200 + (r % 2) * 100},${450 + r * 100} q20,-12 40,0" stroke="#fff" stroke-width="4" fill="none" opacity=".5"/>`).join('')).join('');
     sceneEl.innerHTML = `
@@ -579,10 +644,17 @@
     const objLayer = $('#objs'), raftPos = $('#raftPos'), bank = $('#bank'), wavesEl = $('#waves'), prog = $('#prog');
     function drawJar() {
       const f = state.fruits > 0 && state.fruits % 5 === 0 ? 1 : (state.fruits % 5) / 5;
-      $('#jar').innerHTML = `<rect x="-50" y="-60" width="100" height="120" rx="24" fill="rgba(255,255,255,.55)" stroke="#fff" stroke-width="6"/>
-        <rect x="-42" y="${(52 - 104 * f).toFixed(0)}" width="84" height="${(104 * f).toFixed(0)}" rx="16" fill="#ff7043"/>
-        <rect x="-36" y="-76" width="72" height="20" rx="8" fill="#8d5a2b"/>
-        <text x="0" y="22" text-anchor="middle" font-size="50">🍓</text>`;
+      // Frasco de vidrio: sombra, mermelada con burbujitas, reflejos, tapa de madera con listón y etiqueta de fresa.
+      const top = (52 - 104 * f).toFixed(0), h = (104 * f).toFixed(0);
+      $('#jar').innerHTML = `<ellipse cy="66" rx="50" ry="9" fill="#0b3016" opacity=".2"/>
+        <rect x="-50" y="-60" width="100" height="120" rx="24" fill="rgba(255,255,255,.45)" stroke="#fff" stroke-width="6"/>
+        ${f > 0 ? `<rect x="-42" y="${top}" width="84" height="${h}" rx="16" fill="#ff7043"/><rect x="-42" y="${top}" width="84" height="${Math.min(10, +h)}" rx="5" fill="#ffab91"/>
+        <rect x="14" y="${top}" width="28" height="${h}" rx="14" fill="#bf360c" opacity=".25"/>
+        <circle cx="-20" cy="${Math.min(40, +top + 20)}" r="4" fill="#fff" opacity=".5"/><circle cx="10" cy="${Math.min(46, +top + 34)}" r="3" fill="#fff" opacity=".45"/>` : ''}
+        <rect x="-50" y="-60" width="100" height="120" rx="24" fill="url(#glassG)"/>
+        <rect x="-38" y="-48" width="10" height="84" rx="5" fill="#fff" opacity=".6"/>
+        <rect x="-38" y="-80" width="76" height="24" rx="9" fill="url(#wood)" stroke="#6d4320" stroke-width="3"/><path d="M-38,-62 L38,-62" stroke="#ff5fa2" stroke-width="5"/>
+        <circle cx="0" cy="8" r="28" fill="#fff" opacity=".85"/><g transform="translate(0,10) scale(.55)">${Art.fruit('fresa')}</g>`;
     }
     drawJar();
     let lane = 1, raftY = LANES[1], t = 0, nextSpawn = 2.2, last = performance.now(), done = false, bumps = 0, raf = 0;
@@ -591,7 +663,10 @@
     function spawn() {
       const log = Math.random() < .35;
       const g = mk('g');
-      g.innerHTML = log ? `<g class="obj">${Art.log()}</g>` : `<g class="obj"><g class="bob"><text text-anchor="middle" y="30" font-size="84">${FRUITS[Math.floor(Math.random() * FRUITS.length)]}</text></g></g>`;
+      // Fruta dibujada flotando: anillo de agua, brillo suave y una chispita que titila.
+      g.innerHTML = log ? `<g class="obj">${Art.log()}</g>` : `<g class="obj"><ellipse cy="36" rx="46" ry="10" fill="#fff" opacity=".35"/><circle r="56" fill="url(#haloG)" opacity=".55"/>
+        <g class="bob"><g transform="scale(1.05)">${Art.fruit(Art.FRUITS[Math.floor(Math.random() * Art.FRUITS.length)])}</g>
+        <g transform="translate(32,-38)">${Art.star4(11, 'twinkle')}</g></g></g>`;
       objLayer.appendChild(g);
       objs.push({ g, x: 1720, lane: Math.floor(Math.random() * 3), log, hit: false });
     }
@@ -604,6 +679,7 @@
     function grab(o) {
       Sound.sfx.chime();
       o.g.firstChild.classList.add('collect');
+      burst(o.x, LANES[o.lane], .7);
       state.fruits++; save();
       drawJar();
       // Si la balsa ya llegó, el premio se ve en Juju pero no se anuncia (no debe cortar la llegada).
@@ -680,14 +756,17 @@
       ${L.bg()}
       <g id="playBack"></g>
       <g id="clues">${L.clues.map((c, k) => `<g class="clue" data-k="${k}" transform="translate(${c.x},${c.y})">
-        <circle r="85" fill="transparent"/><g class="halo"><circle r="80" fill="#fff59d"/><circle r="80" fill="none" stroke="#ffd23f" stroke-width="8"/></g>
-        <g class="wiggle" style="animation-delay:${k * .4}s">${Art.clue(L.clue)}</g>
+        <circle r="85" fill="transparent"/>${Art.halo(84)}
+        <g pointer-events="none"><g transform="translate(0,46)">${Art.contact(46, 0, .16)}</g></g>
+        <g class="wiggle" style="animation-delay:${k * .4}s"><g class="idle" style="animation-delay:${k * .3}s">${Art.clue(L.clue)}</g></g>
         <g pointer-events="none">${Art.leaf(-80, 40, .7, -20, '#2e7d32')}${Art.leaf(70, 46, .6, 200, '#388e3c')}</g></g>`).join('')}</g>
       <g id="mom"><g>${Art.animal(L.id)}</g></g>
       <g id="baby"></g>
       <g id="playFront"></g>
       ${Art.foreground()}
-      <g id="counter">${[0, 1, 2].map(k => `<g transform="translate(${680 + k * 120},80)"><rect x="-48" y="-38" width="96" height="76" rx="14" fill="rgba(255,255,255,.6)" stroke="#fff" stroke-width="5" stroke-dasharray="12 8"/><g id="slot${k}"></g></g>`).join('')}</g>
+      <g id="counter"><rect x="604" y="30" width="392" height="104" rx="30" fill="#0b3016" opacity=".16"/><rect x="608" y="28" width="384" height="100" rx="28" fill="rgba(255,255,255,.35)" stroke="#fff" stroke-width="4"/>
+        ${[0, 1, 2].map(k => `<g transform="translate(${680 + k * 120},80)"><rect x="-48" y="-38" width="96" height="76" rx="18" fill="#fff" opacity=".55"/><rect x="-48" y="-38" width="96" height="22" rx="11" fill="#fff" opacity=".5"/>
+          <rect x="-48" y="-38" width="96" height="76" rx="18" fill="none" stroke="#fff" stroke-width="4" stroke-dasharray="10 7"/><g id="slot${k}"></g></g>`).join('')}</g>
       ${button('homeBtn', 80, 80, 'home', '#7e57c2')}`;
     const momEl = $('#mom'), babyEl = $('#baby');
     place(momEl, L.mom);
@@ -700,19 +779,20 @@
       setArt(el, mood, cls = '') { el.innerHTML = `<g class="${cls}">${Art.animal(L.id, mood)}</g>`; },
       reunited,
       // Ayudas para los minijuegos de js/levels2.js
-      mk, countPop, hearts, confetti, flash, NUM, NUM_M, Hint, rescued: () => state.rescued.slice(),
+      mk, countPop, hearts, confetti, flash, burst, NUM, NUM_M, Hint, rescued: () => state.rescued.slice(),
     };
 
     $$('.clue').forEach(el => onTap(el, () => {
       if (phase !== 'clues' || el.dataset.done) return;
       el.dataset.done = '1';
       Sound.sfx.shutter(); flash();
+      burst(L.clues[+el.dataset.k].x, L.clues[+el.dataset.k].y);
       el.querySelector('.halo').remove();
       const w = el.querySelector('.wiggle');
       w.removeAttribute('style'); w.setAttribute('class', 'snapped');
       later(() => el.remove(), 650);
       $('#slot' + found).innerHTML = `<g class="pop-in"><g transform="scale(.6)">${Art.clue(L.clue)}</g></g>
-        <g transform="translate(36,26)"><circle r="17" fill="#66bb6a" stroke="#fff" stroke-width="4"/><path d="M-7,0 L-2,6 L8,-6" stroke="#fff" stroke-width="4" fill="none" stroke-linecap="round"/></g>`;
+        <g transform="translate(36,26)"><g class="pop-in"><circle cy="3" r="18" fill="#2e7d32"/><circle r="17" fill="#66bb6a" stroke="#fff" stroke-width="4"/><ellipse cy="-7" rx="10" ry="5" fill="#fff" opacity=".4"/><path d="M-7,0 L-2,6 L8,-6" stroke="#fff" stroke-width="4.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></g></g>`;
       found++;
       if (found === 3) { phase = 'found'; Hint.clear(); say(L.clueLines[2], () => later(reveal, 300)); }
       else say(L.clueLines[found - 1]);
@@ -721,7 +801,7 @@
     function reveal() {
       phase = 'help';
       place(babyEl, L.baby);
-      babyEl.innerHTML = `<circle cy="-90" r="150" fill="transparent"/><g class="halo"><circle cy="-80" r="140" fill="#fff59d"/></g><g class="pop-in">${Art.animal(L.id, 'sad')}</g>`;
+      babyEl.innerHTML = `<circle cy="-90" r="150" fill="transparent"/>${Art.halo(140, { cy: -80 })}<g class="pop-in">${Art.animal(L.id, 'sad')}</g>`;
       Sound.sfx[L.sound]();
       // Primero Juju lo calma con un toque suavecito (juego de cuidar).
       phase = 'calm';
@@ -732,6 +812,7 @@
         phase = 'help';
         babyEl.querySelectorAll('.halo, circle[fill="transparent"]').forEach(n => n.remove());
         hearts(babyEl._pos.x, babyEl._pos.y - 60);
+        burst(babyEl._pos.x, babyEl._pos.y - 70, .8);
         Sound.sfx.chime();
         say(['¡Suavecito! Ya se siente mejor.', L.task]);
         L.setup(api);
@@ -746,6 +827,7 @@
       Sound.sfx.win();
       later(() => Sound.sfx[L.sound](), 500);
       hearts(momEl._pos.x, momEl._pos.y - 150 * momEl._pos.s);
+      burst(babyEl._pos.x, babyEl._pos.y - 60 * babyEl._pos.s, 1.3);
       confetti();
       say(['¡Mira! Ya está con su mamá. Ahora están muy contentos.', L.praise], () => later(() => quiz(L, () => go(photo, i)), 300));
     }
@@ -762,14 +844,36 @@
   // ---------- Pregunta con dos dibujos: si elige el otro, el correcto brilla y se vuelve a intentar ----------
   function quiz(L, done) {
     const Q = L.quiz;
-    const draw = (o) => o.color ? `<rect x="-80" y="-80" width="160" height="160" rx="12" fill="${o.color}"/>`
-      : o.animal ? Art.thumb(o.animal, 190) : `<text y="60" text-anchor="middle" font-size="170">${o.emoji}</text>`;
+    // Algunos emojis se dibujan con el mismo estilo del juego para que se vean igual en todos lados.
+    const DRAWN = {
+      '🦋': () => `<g transform="translate(0,6) scale(2.9)">${Art.butterfly('#ba68c8')}</g>`,
+      '🐢': () => `<g transform="translate(-12,14)">${Art.thumb('tortuga', 250)}</g>`,
+      '🍌': () => `<g transform="scale(2.4)">${Art.fruit('platano')}</g>`,
+      '🍉': () => `<g transform="translate(0,-10) scale(2.5)">${Art.fruit('sandia')}</g>`,
+    };
+    // Color: gota de pintura brillante. Animal: su dibujo. Emoji: dibujo propio si lo hay.
+    const draw = (o) => o.color ? `<ellipse cx="0" cy="84" rx="76" ry="12" fill="#0b3016" opacity=".12"/>
+        <path d="M0,-92 C40,-60 86,-20 86,22 A86,70 0 0 1 -86,22 C-86,-20 -40,-60 0,-92 Z" fill="${o.color}" stroke="${darker(o.color, .7)}" stroke-width="5"/>
+        <path d="M86,22 A86,70 0 0 1 -86,22 C-60,62 60,62 86,22 Z" fill="#000" opacity=".12"/>
+        <ellipse cx="-34" cy="-6" rx="16" ry="30" fill="#fff" opacity=".55" transform="rotate(30 -34 -6)"/><circle cx="-14" cy="-44" r="7" fill="#fff" opacity=".7"/>`
+      : o.animal ? `<g transform="translate(0,70)">${Art.contact(80, 0, .14)}</g>${Art.thumb(o.animal, 190)}`
+      : DRAWN[o.emoji] ? DRAWN[o.emoji]() : `<text y="60" text-anchor="middle" font-size="170">${o.emoji}</text>`;
     const flip = Math.random() < .5;
     const opts = flip ? [Q.wrong, Q.right] : [Q.right, Q.wrong];
     const layer = mk('g');
-    layer.innerHTML = `<rect width="1600" height="900" fill="#0b3016" opacity=".5"/>` + opts.map((o, k) =>
-      `<g class="qopt" data-ok="${o === Q.right ? 1 : 0}" transform="translate(${560 + k * 480},470)"><g class="qin">
-        <rect x="-150" y="-150" width="300" height="300" rx="24" fill="#fff" stroke="#ffd23f" stroke-width="10" filter="url(#shadow)"/>${draw(o)}</g></g>`).join('');
+    // Tarjetas con relieve: base de color, papel, brillo de esquina y marco dorado.
+    layer.innerHTML = `<rect width="1600" height="900" fill="url(#dimG)"/>
+      <g transform="translate(800,470)" pointer-events="none">${Art.rays(560, 18, '#fff59d', .1)}</g>
+      <g transform="translate(800,250)" pointer-events="none"><g class="bob"><circle cy="6" r="58" fill="#0b3016" opacity=".25"/><circle r="56" fill="#fff" stroke="#ffd23f" stroke-width="8"/>
+        <text y="34" text-anchor="middle" font-size="96" font-weight="800" fill="#ff9800" stroke="#fff" stroke-width="4" paint-order="stroke">?</text></g></g>` + opts.map((o, k) =>
+      `<g class="qopt" data-ok="${o === Q.right ? 1 : 0}" transform="translate(${560 + k * 480},470)"><g class="qin"><g class="qbob" style="animation-delay:${k * -1.3}s">
+        <rect x="-150" y="-138" width="300" height="300" rx="30" fill="#0b3016" opacity=".25"/>
+        <rect x="-150" y="-150" width="300" height="300" rx="30" fill="#f5a623"/>
+        <rect x="-150" y="-158" width="300" height="300" rx="30" fill="url(#cardG)" stroke="#ffd23f" stroke-width="10"/>
+        <rect x="-134" y="-142" width="268" height="268" rx="22" fill="none" stroke="#fff" stroke-width="4" opacity=".9"/>
+        <g transform="translate(0,-8)">${draw(o)}</g>
+        <path d="M-128,-118 Q-128,-136 -110,-136 L40,-136 Q-60,-110 -128,10 Z" fill="#fff" opacity=".35"/>
+        <g class="qmark"></g></g></g></g>`).join('');
     sceneEl.appendChild(layer);
     let answered = false;
     say(Q.q);
@@ -781,10 +885,16 @@
         answered = true;
         Hint.clear();
         Sound.sfx.win();
-        hearts(+el.getAttribute('transform').match(/\(([\d.]+)/)[1], 400);
+        const x = +el.getAttribute('transform').match(/\(([\d.]+)/)[1];
+        // Palomita verde con brillo y festejo.
+        el.querySelector('.qmark').innerHTML = `<g transform="translate(118,-128)"><g class="pop-in"><circle cy="5" r="44" fill="#1b5e20"/><circle r="44" fill="#43a047" stroke="#fff" stroke-width="7"/>
+          <ellipse cy="-18" rx="26" ry="12" fill="#fff" opacity=".35"/><path d="M-20,0 L-6,15 L22,-16" stroke="#fff" stroke-width="11" fill="none" stroke-linecap="round" stroke-linejoin="round"/></g></g>`;
+        burst(x, 470, 1.6);
+        hearts(x, 400);
         say(Q.yes, () => later(done, 300));
       } else {
         Sound.sfx.tick();
+        restart(el.firstElementChild, 'shake');
         right.firstElementChild.setAttribute('class', 'qin pulse');
         say(Q.show);
       }
@@ -794,7 +904,7 @@
   // ---------- Minijuego 1: nubes que llenan el charco ----------
   function setupFrog(api) {
     const CLOUDS = [[760, 170], [990, 115], [1220, 170]];
-    api.back.innerHTML = CLOUDS.map(([x, y], k) => `<g class="cloud" data-k="${k}" transform="translate(${x},${y})"><g class="halo"><ellipse rx="160" ry="100" fill="#fff59d"/></g><g class="drift" style="animation-delay:${-k * 2}s"><g class="pop-in cloud-art">${Art.cloud(true)}</g></g></g>`).join('') +
+    api.back.innerHTML = CLOUDS.map(([x, y], k) => `<g class="cloud" data-k="${k}" transform="translate(${x},${y})">${Art.halo(0, { rx: 165, ry: 105 })}<g class="drift" style="animation-delay:${-k * 2}s"><g class="pop-in cloud-art">${Art.cloud(true)}</g></g></g>`).join('') +
       `<g transform="translate(980,758)"><g id="water" class="grow" style="transform:scale(.001)"><ellipse rx="250" ry="60" fill="url(#water)"/><ellipse cx="-60" cy="-14" rx="70" ry="10" fill="#fff" opacity=".45"/></g></g>
        <g id="rainbow"></g>`;
     const water = api.back.querySelector('#water');
@@ -838,7 +948,7 @@
   function setupToucan(api) {
     const STEPS = [[860, 630], [940, 570], [1010, 510], [1070, 450], [1110, 390]];
     api.back.innerHTML = STEPS.map(([x, y], k) => `<g class="bud" data-k="${k}" transform="translate(${x},${y})" style="display:${k ? 'none' : 'inline'}">
-      <circle r="70" fill="transparent"/><g class="halo"><circle r="72" fill="#fff59d"/></g><g class="pop-in"><g class="grow bud-art" style="transform:scale(.4)">
+      <circle r="70" fill="transparent"/>${Art.halo(76)}<g class="pop-in"><g class="grow bud-art" style="transform:scale(.4)">
       <ellipse cx="0" cy="6" rx="58" ry="16" fill="#43a047"/>${Art.flower(0, -4, ['#ff5fa2', '#ffd23f', '#ff8a65', '#ba68c8', '#ff5fa2'][k], 2.6)}</g></g></g>`).join('') +
       `<g id="siblings"></g>`;
     const buds = [...api.back.querySelectorAll('.bud')];
@@ -850,6 +960,7 @@
       b.querySelector('.halo').remove();
       Sound.sfx.pop();
       const [x, y] = STEPS[j];
+      burst(x, y, .8);
       countPop(k, x, y - 90);
       if (k < STEPS.length) api.say(`¡${NUM[k]} ${k === 1 ? 'flor' : 'flores'}!`);
       api.later(() => api.moveTo(api.baby, { x, y: y - 14 }, 600, 70, () => {
@@ -874,7 +985,13 @@
     api.back.innerHTML = `<g transform="translate(${X},${TOP})"><g id="vine" class="grow" style="transform:scaleY(0);transform-origin:50% 0">
         <path d="M0,0 C-14,100 14,200 0,${BOTTOM - TOP}" stroke="#2e7d32" stroke-width="16" fill="none" stroke-linecap="round"/>
         ${[80, 180, 280, 380].map((y, k) => Art.leaf(0, y, .45, k % 2 ? 200 : -20, '#66bb6a')).join('')}</g></g>`;
-    api.front.innerHTML = `<g id="bundle" transform="translate(${X},${TOP})"><circle r="80" fill="transparent"/><g class="pulse"><circle r="42" fill="#43a047" stroke="#c6ff3a" stroke-width="8"/><path d="M-20,-8 Q0,-26 20,-8 Q0,10 -20,-8" stroke="#1b5e20" stroke-width="6" fill="none"/></g></g>`;
+    // Rollito de liana: espiral de bejuco con hojitas, brillo alrededor.
+    api.front.innerHTML = `<g id="bundle" transform="translate(${X},${TOP})"><circle r="80" fill="transparent"/>${Art.halo(78)}<g class="pulse">
+      <circle cy="4" r="46" fill="#1b5e20"/><circle r="46" fill="#43a047" stroke="#c6ff3a" stroke-width="7"/>
+      <path d="M0,0 m-6,0 a6,6 0 1 1 12,0 a12,12 0 1 1 -24,0 a18,18 0 1 1 36,0 a24,24 0 1 1 -48,0 a30,30 0 1 1 60,0" stroke="#2e7d32" stroke-width="7" fill="none" stroke-linecap="round"/>
+      <path d="M0,0 m-6,0 a6,6 0 1 1 12,0 a12,12 0 1 1 -24,0 a18,18 0 1 1 36,0 a24,24 0 1 1 -48,0" stroke="#8bc34a" stroke-width="2.5" fill="none" stroke-linecap="round" opacity=".8"/>
+      <ellipse cx="-16" cy="-22" rx="14" ry="7" fill="#fff" opacity=".35" transform="rotate(-30 -16 -22)"/>
+      ${Art.leaf(30, -30, .32, -40, '#7cb342')}${Art.leaf(-34, 30, .3, 150, '#66bb6a')}</g></g>`;
     const vine = api.back.querySelector('#vine'), bundle = api.front.querySelector('#bundle');
     let k = 0, slow = 0, phase = 'vine';
     const bundleY = () => TOP + (BOTTOM - TOP) * k / 3;
@@ -929,6 +1046,7 @@
       <g transform="translate(330,860) scale(1.1)"><g class="bob">${Art.juju({ accessory: accessory() })}</g></g>
       <g transform="translate(1290,860) scale(1.1)">${Art.sofia({ cheer: true })}</g>
       <g transform="translate(810,490)"><g class="bob">${Art.family(L.id, 520)}</g></g>
+      <g id="camGlow" transform="translate(800,790)">${Art.halo(124)}</g>
       ${button('camBtn', 800, 790, 'camera', '#ff5fa2', 90, 'pulse')}
       <g id="shot"></g>`;
     say('¡Sonrían! Toca la cámara, Juju.');
@@ -941,14 +1059,24 @@
       // Se guarda en cuanto se toma la foto: si se cierra el juego ahora, la foto ya está en el álbum.
       if (!isRescued(L.id)) { state.rescued.push(L.id); save(); }
       $('#camBtn').remove();
-      $('#shot').innerHTML = `<rect width="1600" height="900" fill="#0b3016" opacity=".5"/>
-        <g transform="translate(560,450)"><g class="pop-in"><g transform="rotate(-4)">${polaroid(L)}</g></g></g>
+      $('#camGlow').remove();
+      burst(800, 790, 1.4);
+      // La foto sale con un brillo que la cruza.
+      $('#shot').innerHTML = `<rect width="1600" height="900" fill="url(#dimG)"/>
+        <g transform="translate(560,450)"><g class="pop-in"><g transform="rotate(-4)">${polaroid(L)}
+          <g clip-path="url(#photoClip)"><rect class="sweep" x="-200" y="-240" width="400" height="400" fill="url(#sheen)"/></g></g></g></g>
         <g id="giftSpot"></g>`;
       say(['¡Clic! Esta foto es tuya para siempre.', L.fact], () => {
         Sound.sfx.chime();
-        $('#giftSpot').innerHTML = `<g transform="translate(1150,420)"><g class="pop-in"><circle r="150" fill="#fffde7" stroke="#ffd23f" stroke-width="10" filter="url(#shadow)"/><g transform="scale(1.6)">${Art.gift(L.id)}</g></g></g>`;
+        // Regalito sobre rayos de sol que giran, con estrellitas alrededor.
+        $('#giftSpot').innerHTML = `<g transform="translate(1150,420)" pointer-events="none"><g class="rays-spin">${Art.rays(240, 16, '#fff59d', .5)}</g></g>
+          <g transform="translate(1150,420)"><g class="pop-in"><circle cy="10" r="150" fill="#f5a623"/><circle r="150" fill="url(#cardG)" stroke="#ffd23f" stroke-width="10" filter="url(#shadow)"/>
+            <circle r="128" fill="none" stroke="#fff" stroke-width="5" stroke-dasharray="2 14" stroke-linecap="round"/><circle r="140" fill="url(#shade)" opacity=".5"/>
+            <g transform="scale(1.6)">${Art.gift(L.id)}</g><ellipse cx="-56" cy="-84" rx="46" ry="20" fill="#fff" opacity=".5" transform="rotate(-30 -56 -84)"/></g></g>
+          ${[[-170, -120, 22], [160, -150, 18], [190, 90, 24], [-180, 110, 16]].map(([dx, dy, r], k) => `<g transform="translate(${1150 + dx},${420 + dy})" pointer-events="none">${Art.star4(r, 'twinkle', `animation-delay:${k * .4}s`)}</g>`).join('')}`;
+        burst(1150, 420, 1.5);
         say([L.gift, 'Y el bebé quiere acompañarnos en la balsa hasta la fiesta del final del río. ¡Súbete!'], () => {
-          $('#giftSpot').innerHTML += button('nextBtn', 1150, 760, '🛶', '#66bb6a', 80, 'pulse');
+          $('#giftSpot').insertAdjacentHTML('beforeend', `<g transform="translate(1150,760)">${Art.halo(112)}</g>` + button('nextBtn', 1150, 760, '🛶', '#66bb6a', 80, 'pulse'));
           Hint.set(() => ({ x: 1150, y: 760, say: 'Toca la balsa para seguir, Juju.' }));
           onTap($('#nextBtn'), () => go(map, { after: i }));
         });
@@ -965,11 +1093,16 @@
     // Papel picado de fiesta
     const flags = Array.from({ length: 16 }, (_, k) => {
       const x = 170 + k * 88, y = 34 + Math.round(Math.sin(k / 15 * Math.PI) * 26);
-      return `<path d="M${x - 34},${y} L${x + 34},${y} L${x + 34},${y + 54} L${x + 17},${y + 46} L${x},${y + 54} L${x - 17},${y + 46} L${x - 34},${y + 54} Z" fill="${colors[k % 6]}"/><circle cx="${x}" cy="${y + 22}" r="8" fill="#fff" opacity=".6"/>`;
+      // Papel picado: banderita con sombra, recortes (flor y rombos) y luz de un lado.
+      return `<path d="M${x - 34},${y} L${x + 34},${y} L${x + 34},${y + 54} L${x + 17},${y + 46} L${x},${y + 54} L${x - 17},${y + 46} L${x - 34},${y + 54} Z" fill="${colors[k % 6]}"/>
+        <path d="M${x + 6},${y} L${x + 34},${y} L${x + 34},${y + 54} L${x + 17},${y + 46} L${x + 6},${y + 51} Z" fill="#000" opacity=".1"/>
+        <circle cx="${x}" cy="${y + 22}" r="8" fill="#fff" opacity=".6"/><path d="M${x},${y + 8} l3,6 l-3,6 l-3,-6 Z M${x},${y + 36} l3,-6 l-3,-6 l-3,6 Z M${x - 14},${y + 22} l6,-3 l6,3 l-6,3 Z M${x + 14},${y + 22} l-6,-3 l-6,3 l6,3 Z" fill="#fff" opacity=".55"/>
+        <path d="M${x - 26},${y + 40} h6 M${x + 20},${y + 40} h6 M${x - 26},${y + 8} h6 M${x + 20},${y + 8} h6" stroke="#fff" stroke-width="3" opacity=".5" stroke-linecap="round"/>`;
     }).join('');
     sceneEl.innerHTML = `
       ${LEVELS[LEVELS.length - 1].bg()}
       <path d="M130,34 Q800,90 1600,34" stroke="#8d5a2b" stroke-width="4" fill="none"/>${flags}
+      ${[[330, 200], [640, 170], [960, 180], [1280, 200], [400, 470], [1300, 450], [100, 420], [1520, 420]].map(([x, y], k) => `<g transform="translate(${x},${y})" pointer-events="none">${Art.star4(14 + (k % 3) * 5, 'twinkle', `animation-delay:${(k * .37).toFixed(2)}s`)}</g>`).join('')}
       ${PLAYABLE_IDS.map((id, k) => `<g transform="translate(${SPOTS[k][0]},${SPOTS[k][1]})"><g class="pop-in" style="animation-delay:${(k * .3).toFixed(1)}s">${Art.family(id, id === 'leon' ? 300 : 250)}</g></g>`).join('')}
       <g id="fJuju" transform="translate(1010,860) scale(.9)">${Art.juju({ accessory: accessory(), cheer: true })}</g>
       <g transform="translate(1200,860) scale(.9)">${Art.sofia({ cheer: true })}</g>
@@ -982,13 +1115,14 @@
 
     const showCam = () => {
       if (phase !== 'photo' || $('#camBtn')) return;
-      $('#fBtn').innerHTML = button('camBtn', 760, 650, 'camera', '#ff5fa2', 90, 'pulse');
+      $('#fBtn').innerHTML = `<g transform="translate(760,650)">${Art.halo(124)}</g>` + button('camBtn', 760, 650, 'camera', '#ff5fa2', 90, 'pulse');
       Hint.set(() => phase === 'photo' && { x: 760, y: 650, say: 'Toca la cámara, Juju.' });
       onTap($('#camBtn'), () => {
         if (phase !== 'photo') return;
         phase = 'medal';
         Hint.clear();
         Sound.sfx.shutter(); flash();
+        burst(760, 650, 1.4);
         $('#fBtn').innerHTML = '';
         say(['¡Clic! ¡Qué foto tan bonita!', 'Mamá leona te trae algo especial. ¡Tócalo!'], showMedal);
       });
@@ -996,11 +1130,12 @@
     // Medalla de Rescatadora Oficial
     const showMedal = () => {
       if (phase !== 'medal' || $('#medalBtn')) return;
-      $('#fBtn').innerHTML = `<g id="medalBtn" transform="translate(760,640)"><g class="pulse">
-        <circle r="100" fill="#fff8e1" stroke="#ffb300" stroke-width="8" filter="url(#shadow)"/>
-        <path d="M-34,-84 L0,-10 L34,-84" stroke="#e53935" stroke-width="18" fill="none"/>
-        <circle cy="22" r="48" fill="#ffc107" stroke="#ff8f00" stroke-width="7"/>
-        <path d="M0,-6 L9,13 L30,15 L14,29 L19,50 L0,39 L-19,50 L-14,29 L-30,15 L-9,13 Z" fill="#fff59d"/></g></g>`;
+      // Medalla dorada sobre rayos de luz, colgada de su listón y meciéndose.
+      $('#fBtn').innerHTML = `<g transform="translate(760,640)" pointer-events="none"><g class="rays-spin">${Art.rays(230, 16, '#fff59d', .55)}</g></g>
+        <g id="medalBtn" transform="translate(760,640)"><circle r="130" fill="transparent"/>${Art.halo(128)}<g class="pulse">
+        <circle r="108" fill="#0b3016" opacity=".18" cy="10"/><circle r="104" fill="url(#cardG)" stroke="#ffb300" stroke-width="8"/><circle r="92" fill="none" stroke="#fff" stroke-width="4" stroke-dasharray="2 12" stroke-linecap="round"/>
+        <g transform="translate(0,26) scale(.95)"><g class="swing">${Art.medal()}</g></g></g></g>
+        ${[[-150, -90, 22], [150, -110, 18], [170, 80, 20], [-160, 100, 16]].map(([dx, dy, r], k) => `<g transform="translate(${760 + dx},${640 + dy})" pointer-events="none">${Art.star4(r, 'twinkle', `animation-delay:${k * .4}s`)}</g>`).join('')}`;
       Hint.set(() => phase === 'medal' && { x: 760, y: 640, say: 'Toca la medalla, Juju.' });
       onTap($('#medalBtn'), () => {
         if (phase !== 'medal') return;
@@ -1008,11 +1143,12 @@
         state.finaleDone = true; save();
         Hint.clear();
         Sound.sfx.win(); confetti();
+        burst(760, 640, 1.8);
         $('#fBtn').innerHTML = '';
         $('#fJuju').innerHTML = `<g class="pop-in">${Art.juju({ accessory: accessory(), cheer: true, medal: true })}</g>`;
         hearts(1010, 600);
         say(['¡Juju, eres la Rescatadora Oficial de la selva!', 'Cuidaste a todos los bebés con mucho cariño.', 'Ve a contarle a mamá Marcela y a papá Checo.', '¡Y ruge suavecito como el leoncito! ¡Miau-grr!'], () => {
-          $('#fBtn').innerHTML = button('endBtn', 760, 650, 'home', '#7e57c2', 80, 'pulse');
+          $('#fBtn').innerHTML = `<g transform="translate(760,650)">${Art.halo(112)}</g>` + button('endBtn', 760, 650, 'home', '#7e57c2', 80, 'pulse');
           Hint.set(() => ({ x: 760, y: 650, say: 'Toca la casita, Juju.' }));
           onTap($('#endBtn'), () => go(cover));
         });

@@ -176,9 +176,22 @@ const Art = (() => {
   };
 
   // ---------- Pistas ----------
-  const drop = (x, y, s = 1) => `<path transform="translate(${x},${y}) scale(${s})" d="M0,-30 C10,-14 16,-4 16,6 A16,16 0 0 1 -16,6 C-16,-4 -10,-14 0,-30 Z" fill="#4fc3f7" stroke="#0288d1" stroke-width="3"/>`;
-  const feather = (x, y, r, c) => `<g transform="translate(${x},${y}) rotate(${r})"><path d="M0,40 C-20,12 -18,-26 0,-48 C18,-26 20,12 0,40 Z" fill="${c}" stroke="rgba(0,0,0,.2)" stroke-width="3"/><path d="M0,52 L0,-40" stroke="#8d6e63" stroke-width="4"/></g>`;
-  const twig = (x, y, r) => `<g transform="translate(${x},${y}) rotate(${r})"><path d="M-46,0 L46,0 M-6,0 L18,-22 M14,0 L30,18" stroke="#8d5a2b" stroke-width="12" stroke-linecap="round" fill="none"/><ellipse cx="22" cy="-26" rx="12" ry="7" fill="#66bb6a"/></g>`;
+  // Gotita con volumen: degradado de agua, brillo alargado y una sombrita del lado derecho.
+  const drop = (x, y, s = 1) => `<g transform="translate(${x},${y}) scale(${s})"><path d="M0,-30 C10,-14 16,-4 16,6 A16,16 0 0 1 -16,6 C-16,-4 -10,-14 0,-30 Z" fill="url(#dropG)" stroke="#0277bd" stroke-width="3"/>` +
+    `<path d="M9,0 C13,8 10,16 2,19" stroke="#01579b" stroke-opacity=".3" stroke-width="4" fill="none" stroke-linecap="round"/>` +
+    `<ellipse cx="-6" cy="0" rx="3.8" ry="9" fill="#fff" opacity=".9" transform="rotate(22 -6 0)"/><circle cx="-5" cy="13" r="2.4" fill="#fff" opacity=".75"/></g>`;
+  // Pluma con barbas, lado en sombra, brillo y cañón.
+  const feather = (x, y, r, c) => `<g transform="translate(${x},${y}) rotate(${r})"><path d="M0,40 C-20,12 -18,-26 0,-48 C18,-26 20,12 0,40 Z" fill="${c}" stroke="rgba(0,0,0,.22)" stroke-width="3"/>` +
+    `<path d="M0,40 C18,12 20,-26 0,-48 Z" fill="#000" opacity=".13"/>` +
+    `<path d="M0,-30 L-10,-21 M0,-16 L-13,-6 M0,-2 L-13,8 M0,12 L-10,21 M0,-24 L10,-14 M0,-10 L13,0 M0,4 L12,14" stroke="#fff" stroke-opacity=".38" stroke-width="2" stroke-linecap="round"/>` +
+    `<path d="M-8,-30 C-14,-14 -14,4 -8,18" stroke="#fff" stroke-opacity=".6" stroke-width="3" fill="none" stroke-linecap="round"/>` +
+    `<path d="M0,52 L0,-40" stroke="#8d6e63" stroke-width="4" stroke-linecap="round"/><path d="M0,52 L0,32" stroke="#5d4037" stroke-width="4" stroke-linecap="round"/></g>`;
+  // Ramita con corteza: borde oscuro, luz arriba, nuditos y hojita con vena.
+  const twig = (x, y, r) => `<g transform="translate(${x},${y}) rotate(${r})"><path d="M-46,0 L46,0 M-6,0 L18,-22 M14,0 L30,18" stroke="#5f3a1a" stroke-width="15" stroke-linecap="round" fill="none"/>` +
+    `<path d="M-46,0 L46,0 M-6,0 L18,-22 M14,0 L30,18" stroke="#a0693a" stroke-width="10" stroke-linecap="round" fill="none"/>` +
+    `<path d="M-42,-2.5 L42,-2.5 M-3,-3 L15,-19" stroke="#d3a273" stroke-width="3" stroke-linecap="round" fill="none"/>` +
+    `<circle cx="-24" cy="1.5" r="2.6" fill="#5f3a1a"/><circle cx="32" cy="1" r="2.2" fill="#5f3a1a"/>` +
+    `<ellipse cx="22" cy="-26" rx="13" ry="7.5" fill="#66bb6a" stroke="#2e7d32" stroke-width="2"/><path d="M10,-25 Q22,-28 34,-27" stroke="#2e7d32" stroke-width="2" fill="none"/><ellipse cx="18" cy="-29" rx="6" ry="2.5" fill="#fff" opacity=".45"/></g>`;
   A.feather = feather;
   A.clue = (t) => ({
     gotas: drop(-28, 10) + drop(10, -18, .8) + drop(34, 16, 1.1),
@@ -386,6 +399,116 @@ const Art = (() => {
     s = s.replace(/<rect x="(-?[\d.]+)" y="-12" width="10" height="64" rx="4" fill="(#f1d28a|#ffe082)"\/>/g,
       (m, x, c) => `<rect x="${x}" y="-12" width="12" height="64" rx="5" fill="${c}"/><path d="M${+x},-4 l12,6 M${+x},12 l12,6 M${+x},28 l12,6" stroke="#b8935a" stroke-width="2"/>`);
     return s;
+  };
+
+  // ===================== Minijuegos y festejos =====================
+  // Brillo de "tócame": luz suave, aro dorado y puntitos de luz que corren por el aro.
+  // Todo va dentro de un solo .halo para que el juego lo quite con un remove().
+  A.halo = (r = 80, o = {}) => {
+    const cx = o.cx || 0, cy = o.cy || 0, rx = o.rx || r, ry = o.ry || r;
+    const e = (k, a) => `<ellipse cx="${cx}" cy="${cy}" rx="${(rx * k).toFixed(1)}" ry="${(ry * k).toFixed(1)}" ${a}/>`;
+    return `<g class="halo" pointer-events="none">${e(1.08, 'fill="url(#haloG)"')}` +
+      e(1.02, 'fill="none" stroke="#ff9800" stroke-width="4" opacity=".45"') +
+      e(.86, 'fill="none" stroke="#ffd23f" stroke-width="7" opacity=".85"') +
+      e(.86, 'class="halo-spin" fill="none" stroke="#fff" stroke-width="8" stroke-linecap="round" stroke-dasharray="1 26"') + '</g>';
+  };
+  // Sombra de contacto en el piso.
+  A.contact = (rx, y = 0, o = .2) => `<ellipse cx="0" cy="${y}" rx="${rx}" ry="${(rx * .22).toFixed(1)}" fill="#0b3016" opacity="${o}"/>`;
+  // Destello de 4 puntas y estrella de 5 puntas (con degradado dorado y borde blanco).
+  A.star4 = (s = 24, cls = '', style = '') => `<path${cls ? ` class="${cls}"` : ''}${style ? ` style="${style}"` : ''} d="M0,${-s} L${s * .26},${-s * .26} L${s},0 L${s * .26},${s * .26} L0,${s} L${-s * .26},${s * .26} L${-s},0 L${-s * .26},${-s * .26} Z" fill="url(#starG)" stroke="#fff" stroke-width="${(s / 9).toFixed(1)}" stroke-linejoin="round"/>`;
+  A.starPath = (r, inner = .45) => 'M' + Array.from({ length: 10 }, (_, k) => {
+    const a = -Math.PI / 2 + k * Math.PI / 5, rr = k % 2 ? r * inner : r;
+    return `${(Math.cos(a) * rr).toFixed(1)},${(Math.sin(a) * rr).toFixed(1)}`;
+  }).join(' L') + ' Z';
+  // Rayos de sol detrás de un premio (un solo trazo para que pese poco).
+  A.rays = (r, n = 14, c = '#fff59d', o = .45) => `<path d="${Array.from({ length: n }, (_, k) => {
+    const a = k * 2 * Math.PI / n, w = Math.PI / n * .55;
+    const p = (ang, rad) => `${(Math.cos(ang) * rad).toFixed(1)},${(Math.sin(ang) * rad).toFixed(1)}`;
+    return `M0,0 L${p(a - w, r)} L${p(a + w, r)} Z`;
+  }).join(' ')}" fill="${c}" opacity="${o}"/>`;
+
+  // Estallido de festejo centrado en el origen: anillo, chispas de colores y estrellitas.
+  const BURST_C = ['#ffd23f', '#ff5fa2', '#4fc3f7', '#66bb6a', '#ff8a65', '#ba68c8'];
+  A.burst = (size = 1) => {
+    let s = `<circle class="burst-ring" r="${Math.round(84 * size)}" fill="none" stroke="#fff" stroke-width="${Math.round(14 * size)}"/>` +
+      `<circle class="burst-ring" style="animation-delay:.08s" r="${Math.round(62 * size)}" fill="none" stroke="#ffd23f" stroke-width="${Math.round(9 * size)}"/>`;
+    for (let k = 0; k < 10; k++) {
+      const a = k * 36 + (k % 2) * 12, d = Math.round((k % 2 ? 170 : 130) * size);
+      const p = k % 3 === 0 ? A.star4(Math.round(22 * size), 'burst-p', `--d:-${d}px`)
+        : `<circle class="burst-p" style="--d:-${d}px" r="${Math.round((k % 2 ? 10 : 14) * size)}" fill="${BURST_C[k % 6]}" stroke="#fff" stroke-width="3"/>`;
+      s += `<g transform="rotate(${a}) translate(0,${-Math.round(30 * size)})">${p}</g>`;
+    }
+    return `<g pointer-events="none">${s}</g>`;
+  };
+
+  // Manita que señala: la punta del dedo queda en el origen. Contorno blanco para verse en cualquier fondo.
+  const HAND = `<rect x="-16" y="44" width="70" height="66" rx="28"/><rect x="22" y="44" width="36" height="23" rx="11.5"/>
+    <rect x="24" y="64" width="36" height="23" rx="11.5"/><rect x="20" y="84" width="32" height="21" rx="10.5"/>
+    <rect x="-34" y="60" width="38" height="23" rx="11.5" transform="rotate(-28 -15 71)"/><rect x="-14" y="0" width="28" height="80" rx="14"/>`;
+  A.hand = () => `<g transform="rotate(-14) scale(1.2)">
+    <g fill="#fff" stroke="#fff" stroke-width="16" stroke-linejoin="round" opacity=".95">${HAND}<rect x="-22" y="102" width="82" height="32" rx="12"/></g>
+    <g fill="#ffd6b8" stroke="#9a5b38" stroke-width="4.5" stroke-linejoin="round">${HAND}</g>
+    <rect x="2" y="8" width="9" height="66" rx="4.5" fill="#c97b52" opacity=".22"/><rect x="-9" y="16" width="5" height="44" rx="2.5" fill="#fff" opacity=".6"/>
+    <rect x="-7" y="5" width="14" height="13" rx="6" fill="#fff" opacity=".65"/>
+    <rect x="-22" y="102" width="82" height="32" rx="12" fill="#4fc3f7" stroke="#0277bd" stroke-width="4.5"/><rect x="-16" y="106" width="70" height="9" rx="4.5" fill="#fff" opacity=".45"/></g>`;
+
+  // Frutas del río (dibujadas, para que se vean igual en laptop y iPhone). Centradas en el origen, ~80 px.
+  const gl = (cx, cy, rx, ry, r = 0, o = .5) => `<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="#fff" opacity="${o}" transform="rotate(${r} ${cx} ${cy})"/>`;
+  const leafy = (x, y, r) => `<g transform="translate(${x},${y}) rotate(${r})"><path d="M0,0 C6,-16 26,-20 34,-12 C26,-2 10,2 0,0 Z" fill="#4caf50" stroke="#2e7d32" stroke-width="2.5"/><path d="M2,-1 Q16,-8 30,-11" stroke="#2e7d32" stroke-width="2" fill="none"/></g>`;
+  const FRUIT = {
+    fresa: () => `<path d="M0,38 C-26,28 -38,4 -36,-12 C-34,-28 -16,-30 0,-24 C16,-30 34,-28 36,-12 C38,4 26,28 0,38 Z" fill="#e53935" stroke="#a31515" stroke-width="3"/>
+      <path d="M0,38 C26,28 38,4 36,-12 C34,-24 24,-28 14,-27 C26,-12 22,14 0,38 Z" fill="#000" opacity=".13"/>
+      ${[[-18, -8], [0, -12], [18, -8], [-22, 8], [-6, 4], [10, 6], [24, 6], [-12, 20], [6, 22]].map(([x, y]) => `<ellipse cx="${x}" cy="${y}" rx="2.2" ry="3.4" fill="#ffe082"/>`).join('')}
+      ${gl(-20, -10, 6, 11, 25, .5)}
+      <path d="M0,-24 L-22,-30 L-10,-34 L-16,-46 L-2,-38 L4,-50 L8,-36 L22,-42 L14,-30 L26,-26 Z" fill="#43a047" stroke="#2e7d32" stroke-width="2.5" stroke-linejoin="round"/>
+      <path d="M2,-38 Q4,-50 10,-54" stroke="#2e7d32" stroke-width="4" fill="none" stroke-linecap="round"/>`,
+    platano: () => `<path d="M-36,-26 C-34,18 14,40 42,16 C46,11 42,5 36,7 C8,14 -12,2 -20,-26 Z" fill="#ffd54f" stroke="#b98900" stroke-width="3" stroke-linejoin="round"/>
+      <path d="M-31,-6 C-20,22 14,32 41,14 C16,26 -14,24 -31,-6 Z" fill="#e0a000" opacity=".5"/>
+      <path d="M-28,-16 C-24,4 -10,14 6,18" stroke="#fff" stroke-opacity=".65" stroke-width="4" fill="none" stroke-linecap="round"/>
+      <path d="M-36,-26 L-35,-36 L-23,-36 L-22,-26 Z" fill="#6d4c41"/><circle cx="41" cy="12" r="4" fill="#5d4037"/>`,
+    mango: () => `<path d="M-32,-4 C-36,-30 -6,-36 12,-28 C34,-18 38,14 22,28 C6,40 -28,30 -32,-4 Z" fill="#ffb300" stroke="#c66a00" stroke-width="3"/>
+      <path d="M-30,-6 C-32,-26 -8,-32 8,-26 C-4,-18 -14,-6 -16,12 C-24,8 -30,2 -30,-6 Z" fill="#f4511e" opacity=".5"/>
+      <path d="M22,28 C36,14 34,-14 14,-26 C26,-6 24,16 4,34 C12,34 18,32 22,28 Z" fill="#000" opacity=".1"/>
+      ${gl(-14, -14, 6, 11, 35, .55)}${leafy(4, -30, -20)}<path d="M2,-30 L-2,-40" stroke="#5d4037" stroke-width="4" stroke-linecap="round"/>`,
+    naranja: () => `<circle cy="4" r="34" fill="#ff9800" stroke="#d35400" stroke-width="3"/>
+      <circle cy="4" r="32" fill="url(#shade)"/>
+      ${[[-14, 18], [10, 22], [20, 0], [-22, 0], [2, -8], [-6, 26], [18, 14]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="1.7" fill="#d35400" opacity=".45"/>`).join('')}
+      ${gl(-12, -10, 9, 13, 35, .55)}${leafy(2, -28, -30)}<circle cx="0" cy="-29" r="3.5" fill="#6d8b2e"/>`,
+    uvas: () => `<path d="M0,-30 Q2,-42 8,-46" stroke="#5d4037" stroke-width="4" fill="none" stroke-linecap="round"/>${leafy(4, -38, -15)}
+      ${[[-22, -16], [0, -20], [22, -16], [-12, 2], [12, 2], [-24, 12], [24, 12], [0, 20], [-11, 34], [11, 34]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="13" fill="#8e44ad" stroke="#5b2378" stroke-width="2.5"/><circle cx="${x - 4}" cy="${y - 4}" r="4" fill="#fff" opacity=".55"/>`).join('')}`,
+    sandia: () => `<path d="M-46,-12 A46,46 0 0 0 46,-12 Z" fill="#2e7d32" stroke="#1b5e20" stroke-width="3"/>
+      <path d="M-40,-12 A40,40 0 0 0 40,-12 Z" fill="#e8f5e9"/><path d="M-35,-12 A35,35 0 0 0 35,-12 Z" fill="#ef5350"/>
+      <path d="M-35,-12 A35,35 0 0 0 35,-12 L28,-12 A28,22 0 0 1 -28,-12 Z" fill="#000" opacity=".08"/>
+      <path d="M-32,-14 L32,-14" stroke="#ff8a80" stroke-width="4" stroke-linecap="round"/>
+      ${[[-18, -2], [0, 4], [18, -2], [-8, 14], [10, 14]].map(([x, y]) => `<ellipse cx="${x}" cy="${y}" rx="3" ry="5" fill="#3e2723"/>`).join('')}
+      ${[-30, -12, 8, 26].map(x => `<path d="M${x},${Math.round(-12 + Math.sqrt(Math.max(0, 46 * 46 - x * x)) * .9)} l4,${-6}" stroke="#81c784" stroke-width="4" stroke-linecap="round"/>`).join('')}`,
+  };
+  A.FRUITS = ['fresa', 'platano', 'mango', 'naranja', 'uvas'];
+  A.fruit = (kind) => (FRUIT[kind] ? `<g>${FRUIT[kind]()}</g>` : '');
+
+  // Medalla de Rescatadora Oficial: listón de dos colores, borde dorado festoneado y estrella con relieve.
+  // El centro del disco queda en el origen; el listón sube hasta y = -120.
+  A.medal = () => {
+    const scallop = Array.from({ length: 22 }, (_, k) => {
+      const a = k * 2 * Math.PI / 22;
+      return `<circle cx="${(Math.cos(a) * 58).toFixed(1)}" cy="${(Math.sin(a) * 58).toFixed(1)}" r="9"/>`;
+    }).join('');
+    return `<g>
+      <path d="M-58,-124 L-26,-124 L10,-30 L-14,-20 Z" fill="#e53935" stroke="#b71c1c" stroke-width="3" stroke-linejoin="round"/>
+      <path d="M-46,-124 L-37,-124 L-1,-27 L-8,-24 Z" fill="#fff" opacity=".85"/>
+      <path d="M58,-124 L26,-124 L-10,-30 L14,-20 Z" fill="#1e88e5" stroke="#0d47a1" stroke-width="3" stroke-linejoin="round"/>
+      <path d="M46,-124 L37,-124 L1,-27 L8,-24 Z" fill="#ffd23f" opacity=".9"/>
+      <rect x="-16" y="-66" width="32" height="20" rx="9" fill="url(#goldRim)" stroke="#a15c00" stroke-width="3"/>
+      <ellipse cx="0" cy="8" rx="64" ry="14" fill="#000" opacity=".12"/>
+      <g fill="url(#goldRim)" stroke="#a15c00" stroke-width="2">${scallop}</g>
+      <circle r="58" fill="url(#goldRim)"/>
+      <circle r="47" fill="url(#goldG)" stroke="#fff3c4" stroke-width="4"/>
+      <circle r="39" fill="none" stroke="#b86e00" stroke-width="2.5" stroke-dasharray="2 6" stroke-linecap="round" opacity=".7"/>
+      <path d="${A.starPath(30)}" transform="translate(0,3)" fill="#b86e00" opacity=".45"/>
+      <path d="${A.starPath(30)}" fill="url(#starG)" stroke="#c77800" stroke-width="3" stroke-linejoin="round"/>
+      <path d="M-10,-12 L0,-26 L4,-14" stroke="#fff" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity=".8"/>
+      <ellipse cx="-24" cy="-26" rx="14" ry="7" fill="#fff" opacity=".55" transform="rotate(-35 -24 -26)"/>
+      <circle cx="-48" cy="-6" r="3" fill="#fff" opacity=".9"/></g>`;
   };
 
   return A;

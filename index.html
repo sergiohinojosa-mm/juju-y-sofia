@@ -15,7 +15,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Pixelify+Sans:wght@600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=29">
+<link rel="stylesheet" href="css/style.css?v=30">
 </head>
 <body>
 <svg id="stage" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
@@ -89,7 +89,72 @@
       <stop offset="0" stop-color="#81d4fa"/>
       <stop offset="1" stop-color="#29b6f6"/>
     </linearGradient>
+    <!-- Minijuegos y festejos: brillo de lo que se toca, tarjetas, oro de la medalla, corazones y estrellas -->
+    <radialGradient id="haloG">
+      <stop offset="0" stop-color="#fffef2" stop-opacity="1"/>
+      <stop offset=".5" stop-color="#fff59d" stop-opacity="1"/>
+      <stop offset=".8" stop-color="#ffe066" stop-opacity=".75"/>
+      <stop offset="1" stop-color="#ffca28" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="cardG" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#fff1d6"/>
+    </linearGradient>
+    <linearGradient id="goldG" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fff6c2"/>
+      <stop offset=".35" stop-color="#ffd23f"/>
+      <stop offset=".75" stop-color="#f5a623"/>
+      <stop offset="1" stop-color="#c77800"/>
+    </linearGradient>
+    <linearGradient id="goldRim" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffe9a0"/>
+      <stop offset="1" stop-color="#b86e00"/>
+    </linearGradient>
+    <radialGradient id="heartG" cx=".35" cy=".3" r=".8">
+      <stop offset="0" stop-color="#ffb3d6"/>
+      <stop offset=".5" stop-color="#ff5fa2"/>
+      <stop offset="1" stop-color="#d81b72"/>
+    </radialGradient>
+    <radialGradient id="starG" cx=".45" cy=".4" r=".7">
+      <stop offset="0" stop-color="#fffef0"/>
+      <stop offset=".45" stop-color="#ffe566"/>
+      <stop offset="1" stop-color="#ffb300"/>
+    </radialGradient>
+    <linearGradient id="numG" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff9c4"/>
+      <stop offset=".5" stop-color="#ffd23f"/>
+      <stop offset="1" stop-color="#ff9800"/>
+    </linearGradient>
+    <radialGradient id="dimG" cx=".5" cy=".5" r=".75">
+      <stop offset="0" stop-color="#0b3016" stop-opacity=".3"/>
+      <stop offset="1" stop-color="#0b3016" stop-opacity=".72"/>
+    </radialGradient>
+    <radialGradient id="flashG" cx=".5" cy=".45" r=".75">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset=".7" stop-color="#fffdf2"/>
+      <stop offset="1" stop-color="#ffe9b0"/>
+    </radialGradient>
+    <linearGradient id="dropG" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#b3ecff"/>
+      <stop offset=".5" stop-color="#4fc3f7"/>
+      <stop offset="1" stop-color="#0288d1"/>
+    </linearGradient>
+    <linearGradient id="glassG" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#fff" stop-opacity=".75"/>
+      <stop offset=".3" stop-color="#fff" stop-opacity=".25"/>
+      <stop offset=".8" stop-color="#fff" stop-opacity=".15"/>
+      <stop offset="1" stop-color="#fff" stop-opacity=".5"/>
+    </linearGradient>
+    <linearGradient id="sheen" x1="0" y1="0" x2="1" y2="1">
+      <stop offset=".25" stop-color="#fff" stop-opacity="0"/>
+      <stop offset=".45" stop-color="#fff" stop-opacity=".35"/>
+      <stop offset=".6" stop-color="#fff" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="iconShadow" x="-30%" y="-30%" width="160%" height="170%">
+      <feDropShadow dx="0" dy="3" stdDeviation="1.5" flood-color="#000" flood-opacity=".28"/>
+    </filter>
     <clipPath id="stageClip"><rect width="1600" height="900"/></clipPath>
+    <clipPath id="photoClip"><rect x="-200" y="-240" width="400" height="400"/></clipPath>
     <clipPath id="portraitClip"><circle r="56"/></clipPath>
     <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%">
       <feDropShadow dx="0" dy="6" stdDeviation="6" flood-color="#0b3016" flood-opacity=".3"/>
@@ -104,15 +169,15 @@
   <p>¡Gira tu teléfono, Juju!</p>
 </div>
 
-<script src="audio/tts.js?v=29"></script>
-<script src="audio/frases.js?v=29"></script>
-<script src="js/audio.js?v=29"></script>
-<script src="js/art.js?v=29"></script>
-<script src="js/art2.js?v=29"></script>
-<script src="js/art-personajes.js?v=29"></script>
-<script src="js/art-animales.js?v=29"></script>
-<script src="js/art-animales2.js?v=29"></script>
-<script src="js/levels2.js?v=29"></script>
-<script src="js/game.js?v=29"></script>
+<script src="audio/tts.js?v=30"></script>
+<script src="audio/frases.js?v=30"></script>
+<script src="js/audio.js?v=30"></script>
+<script src="js/art.js?v=30"></script>
+<script src="js/art2.js?v=30"></script>
+<script src="js/art-personajes.js?v=30"></script>
+<script src="js/art-animales.js?v=30"></script>
+<script src="js/art-animales2.js?v=30"></script>
+<script src="js/levels2.js?v=30"></script>
+<script src="js/game.js?v=30"></script>
 </body>
 </html>

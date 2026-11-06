@@ -142,9 +142,62 @@ body { position: fixed; inset: 0; }
 @keyframes ripple { from { transform: scale(.3); opacity: .8; } to { transform: scale(1.4); opacity: 0; } }
 
 @media (prefers-reduced-motion: reduce) {
-  .wiggle, .pulse, .bob, .drift, .happy-jump, .flow { animation: none; }
+  .wiggle, .pulse, .bob, .drift, .happy-jump, .flow, .idle, .halo-spin, .rays-spin, .twinkle, .flutter, .hand-tap, .tap-ring { animation: none; }
 }
 
 /* Brillo amarillo que pulsa detrás de lo que hay que tocar */
 .halo { transform-box: fill-box; transform-origin: center; animation: halo 1.3s ease-in-out infinite; pointer-events: none; }
-@keyframes halo { 0%, 100% { transform: scale(.85); opacity: .35; } 50% { transform: scale(1.1); opacity: .85; } }
+@keyframes halo { 0%, 100% { transform: scale(.88); opacity: .6; } 50% { transform: scale(1.1); opacity: 1; } }
+
+/* ---------- Minijuegos y festejos (estilo detallado) ---------- */
+/* Anillo de puntitos que gira alrededor del brillo */
+.halo-spin { animation: dashRun 2.4s linear infinite; }
+@keyframes dashRun { to { stroke-dashoffset: -108; } }
+@keyframes spin { to { transform: rotate(360deg); } }
+.rays-spin { transform-box: fill-box; transform-origin: center; animation: spin 16s linear infinite; pointer-events: none; }
+
+/* Respiración suave de lo que se puede tocar: sube un poquito y se aplasta al bajar */
+.idle { transform-box: fill-box; transform-origin: 50% 100%; animation: idle 2.2s ease-in-out infinite; }
+@keyframes idle {
+  0%, 100% { transform: translateY(0) scale(1.03, .97); }
+  45% { transform: translateY(-9px) scale(.98, 1.03); }
+  60% { transform: translateY(-9px) scale(.98, 1.03); }
+}
+
+/* Estallido de éxito: anillo, chispas que salen volando y estrellitas */
+.burst-ring { transform-box: fill-box; transform-origin: center; animation: burstRing .6s ease-out forwards; pointer-events: none; }
+@keyframes burstRing { from { transform: scale(.2); opacity: 1; } to { transform: scale(1.5); opacity: 0; } }
+.burst-p { transform-box: fill-box; transform-origin: center; animation: burstP .7s cubic-bezier(.2, .8, .4, 1) forwards; pointer-events: none; }
+@keyframes burstP { from { transform: translateY(0) scale(.4); opacity: 1; } 60% { opacity: 1; } to { transform: translateY(var(--d, -120px)) scale(1); opacity: 0; } }
+.tap-p { transform-box: fill-box; transform-origin: center; animation: tapP .45s ease-out forwards; pointer-events: none; }
+@keyframes tapP { from { transform: translateY(-14px) scale(1); opacity: .95; } to { transform: translateY(-58px) scale(.3); opacity: 0; } }
+
+/* Estrellitas que titilan */
+.twinkle { transform-box: fill-box; transform-origin: center; animation: twinkle 1.6s ease-in-out infinite; }
+@keyframes twinkle { 0%, 100% { transform: scale(.5) rotate(0); opacity: .3; } 50% { transform: scale(1.1) rotate(30deg); opacity: 1; } }
+
+/* Confeti que gira como papelito */
+.flutter { transform-box: fill-box; transform-origin: center; animation: flutter .5s ease-in-out infinite alternate; }
+@keyframes flutter { from { transform: scaleX(1); } to { transform: scaleX(.15); } }
+
+/* Manita de ayuda: toca y vuelve */
+.hand-tap { transform-box: view-box; animation: handTap 1.1s ease-in-out infinite; }
+@keyframes handTap {
+  0%, 100% { transform: translate(14px, 22px) scale(1); }
+  45% { transform: translate(0, 0) scale(.94); }
+  55% { transform: translate(0, 0) scale(.94); }
+}
+.tap-ring { transform-box: fill-box; transform-origin: center; animation: tapRing 1.1s ease-out infinite; }
+@keyframes tapRing { 0%, 40% { transform: scale(.2); opacity: 0; } 50% { transform: scale(.4); opacity: 1; } 100% { transform: scale(1.4); opacity: 0; } }
+
+/* Tarjetas de la pregunta: flotan un poquito, cada una a su ritmo */
+.qbob { animation: bob 2.6s ease-in-out infinite; }
+.right-glow { transform-box: fill-box; transform-origin: center; animation: pulse .9s ease-in-out infinite; }
+
+/* Medalla que se balancea colgada de su listón */
+.swing { transform-box: view-box; transform-origin: 0 -110px; animation: swing 2.4s ease-in-out infinite; }
+@keyframes swing { 0%, 100% { transform: rotate(-4deg); } 50% { transform: rotate(4deg); } }
+
+/* Brillo que cruza la foto */
+.sweep { animation: sweep 2.8s ease-in-out .6s both; pointer-events: none; }
+@keyframes sweep { from { transform: translateX(-520px); } to { transform: translateX(520px); } }
