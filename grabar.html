@@ -62,17 +62,19 @@
   </details>
 </main>
 
-<script src="audio/frases.js?v=22"></script>
+<script src="audio/frases.js?v=23"></script>
 <script>
 // ?quien=luciana muestra solo las frases de Sofía; ?quien=marcela, solo las de las mamás.
 const QUIEN = (new URLSearchParams(location.search).get('quien') || '').toLowerCase();
-const F = (window.FRASES || []).filter(f => QUIEN === 'luciana' ? f.who === 'Sofía' : QUIEN === 'marcela' ? f.who !== 'Sofía' : true);
+// ?solo=S008,S011 muestra solo esas frases (para regrabar).
+const SOLO = (new URLSearchParams(location.search).get('solo') || '').split(',').filter(Boolean);
+const F = (window.FRASES || []).filter(f => SOLO.length ? SOLO.includes(f.id) : QUIEN === 'luciana' ? f.who === 'Sofía' : QUIEN === 'marcela' ? f.who !== 'Sofía' : true);
 const KEY = 'grabadora.hechas';
 let done = {};
 try { done = JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) {}
 const saveDone = () => { try { localStorage.setItem(KEY, JSON.stringify(done)); } catch (e) {} };
 
-let i = Math.max(0, F.findIndex(f => !done[f.id]));
+let i = SOLO.length ? 0 : Math.max(0, F.findIndex(f => !done[f.id]));
 let recorder = null, chunks = [], blob = null, stream = null;
 const $ = (id) => document.getElementById(id);
 // Safari graba en .m4a (se oye en todos lados); Chrome en .webm.

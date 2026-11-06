@@ -214,7 +214,7 @@
       const [x, y] = T[j];
       api.countPop(k, x, y - 190);
       api.setArt(api.baby, 'happy');
-      if (k < T.length) api.say(k === 1 ? '¡Una tortuga! ¡Brinca, cachorro!' : `¡${api.NUM[k]} tortugas!`);
+      if (k < T.length) api.say(k === 1 ? '¡Una tortuga! ¡Brinca, cachorro!' : `¡${api.NUM[k]} tortuguitas!`);
       api.moveTo(api.baby, { x, y: y - 48 }, 700, 90, () => (k === 2 ? sneeze(t) : next()));
     }));
     function next() {
