@@ -97,7 +97,7 @@
   // Perfiles: cada niña tiene su propio avance y su álbum; el personaje siempre es Juju.
   const PROFILES_KEY = 'jujuSofia.perfiles', CURRENT_KEY = 'jujuSofia.actual';
   // ?reset=todo borra el avance de todas las jugadoras (para empezar pruebas desde cero).
-  if (/[?&]reset=todo/.test(location.search)) {
+  if (/[?&]reset=todo(&|$)/.test(location.search)) {
     try { Object.keys(localStorage).filter(k => k.startsWith('jujuSofia')).forEach(k => localStorage.removeItem(k)); } catch (e) {}
     try { history.replaceState(null, '', location.pathname); } catch (e) {}
   }
@@ -152,7 +152,7 @@
   }
   // Si en otra pestaña se reinicia este perfil, esta también empieza de cero (y no lo vuelve a escribir).
   window.addEventListener('storage', (e) => {
-    if ((e.key === saveKey(current) || e.key === null) && e.newValue === null) useProfile(current);
+    if ((e.key === saveKey(current) || e.key === null) && e.newValue === null) { useProfile(current); go(cover); }
   });
   function useProfile(id) {
     current = id;
@@ -379,16 +379,17 @@
       <g id="picker"></g>`;
     onTap($('#whoBtn'), () => openPicker());
     function openPicker() {
-      const W = 300, gap = 40, all = profiles.length + 1;
+      const canAdd = profiles.length < 5, all = profiles.length + (canAdd ? 1 : 0);
+      const gap = 30, W = Math.min(300, (1500 - gap * (all - 1)) / all);
       const x0 = 800 - (all * W + (all - 1) * gap) / 2 + W / 2;
       $('#picker').innerHTML = `<rect width="1600" height="900" fill="#0b3016" opacity=".6"/>
         ${title(800, 200, '¿Quién juega?', 80)}` +
         profiles.map((p, k) => `<g class="who" data-id="${p.id}" transform="translate(${x0 + k * (W + gap)},470)">
           <rect x="${-W / 2}" y="-150" width="${W}" height="300" rx="40" fill="${profileColor(p)}" stroke="${p.id === current ? '#ffd23f' : '#fff'}" stroke-width="${p.id === current ? 14 : 6}" filter="url(#shadow)"/>
           <text y="30" text-anchor="middle" font-size="140" font-weight="800" fill="#fff">${esc(initial(p.name))}</text>
-          <text y="115" text-anchor="middle" font-size="42" font-weight="800" fill="#fff">${esc(p.name)}</text></g>`).join('') +
-        `<g id="addWho" transform="translate(${x0 + profiles.length * (W + gap)},470)"><rect x="${-W / 2}" y="-150" width="${W}" height="300" rx="40" fill="rgba(255,255,255,.25)" stroke="#fff" stroke-width="6" stroke-dasharray="18 12"/>
-          <text y="50" text-anchor="middle" font-size="160" font-weight="800" fill="#fff">+</text></g>`;
+          <text y="115" text-anchor="middle" font-size="${W < 260 ? 34 : 42}" font-weight="800" fill="#fff">${esc(p.name)}</text></g>`).join('') +
+        (!canAdd ? '' : `<g id="addWho" transform="translate(${x0 + profiles.length * (W + gap)},470)"><rect x="${-W / 2}" y="-150" width="${W}" height="300" rx="40" fill="rgba(255,255,255,.25)" stroke="#fff" stroke-width="6" stroke-dasharray="18 12"/>
+          <text y="50" text-anchor="middle" font-size="160" font-weight="800" fill="#fff">+</text></g>`);
       say('¿Quién va a jugar?');
       $$('.who').forEach(el => onTap(el, () => {
         useProfile(el.dataset.id);
@@ -396,7 +397,7 @@
         go(cover, { greet: `¡Hola, ${profile().name}!` });
       }));
       onTap($('#addWho'), () => {
-        const name = (window.prompt('¿Cómo se llama la nueva jugadora?') || '').trim().slice(0, 14);
+        const name = Array.from((window.prompt('¿Cómo se llama la nueva jugadora?') || '').trim()).slice(0, 14).join('');
         if (!name) return;
         useProfile(addProfile(name));
         go(cover, { greet: `¡Hola, ${name}!` });
@@ -587,7 +588,8 @@
       o.g.firstChild.classList.add('collect');
       state.fruits++; save();
       drawJar();
-      if (state.fruits === 5 || state.fruits === 10) {
+      // Si la balsa ya llegó, el premio se ve en Juju pero no se anuncia (no debe cortar la llegada).
+      if ((state.fruits === 5 || state.fruits === 10) && !done) {
         Sound.sfx.win();
         say(state.fruits === 5 ? '¡Llenaste el frasco! Ganaste una capa de reina.' : '¡Otro frasco lleno! Ganaste una varita mágica.');
         $('#raftArt').innerHTML = raftArt();

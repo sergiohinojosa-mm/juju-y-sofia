@@ -22,7 +22,7 @@ const Sound = (() => {
     if (musicOn && !timer) startMusic();
     // iPhone en modo silencio: los efectos solo suenan si hay un audio "normal" reproduciéndose.
     // Un audio mudo en bucle mantiene ese canal abierto.
-    if (!keepAlive) { keepAlive = new Audio(silentWav()); keepAlive.loop = true; keepAlive.volume = 0.01; }
+    if (!keepAlive) { keepAlive = new Audio(silentUrl()); keepAlive.loop = true; keepAlive.volume = 0.01; }
     if (keepAlive.paused) keepAlive.play().catch(() => {});
   }
   let keepAlive = null;
@@ -178,7 +178,9 @@ const Sound = (() => {
   let playing = null;
   function stopFile() { try { if (playing) playing.stop(); } catch (e) {} playing = null; }
 
-  return { unlock, sfx, setMusic, duck, playFile, stopFile };
+  let silent = null;
+  const silentUrl = () => silent || (silent = silentWav());
+  return { unlock, sfx, setMusic, duck, playFile, stopFile, silentUrl };
 })();
 
 const Voice = (() => {
@@ -224,24 +226,45 @@ const Voice = (() => {
   const player = new Audio();
   player.preload = 'auto';
   let playerReady = false;
+
+  // Temporizadores que se detienen mientras el juego no se ve (app en segundo plano) y siguen
+  // al volver, para que las frases no avancen sin que Juju las oiga.
+  const timers = new Set();
+  function ptimeout(fn, ms) {
+    const t = { fn, left: ms, start: Date.now(), id: 0 };
+    const run = () => { timers.delete(t); fn(); };
+    t.run = run;
+    if (!document.hidden) t.id = setTimeout(run, ms);
+    timers.add(t);
+    return t;
+  }
+  function pclear(t) { if (t) { clearTimeout(t.id); timers.delete(t); } }
+
   function playVoice(url) {
     return new Promise((ok, bad) => {
       let over = false;
-      const end = () => { if (!over) { over = true; clearTimeout(cap); ok(); } };
-      const fail = () => { if (!over) { over = true; clearTimeout(cap); bad(); } };
+      const end = () => { if (!over) { over = true; pclear(cap); ok(); } };
+      const fail = () => { if (!over) { over = true; pclear(cap); bad(); } };
       // Tope por si el aparato nunca avisa que terminó.
-      let cap = setTimeout(end, 15000);
+      let cap = ptimeout(end, 15000);
       player.onended = end;
       player.onerror = fail;
-      player.onloadedmetadata = () => { if (isFinite(player.duration)) { clearTimeout(cap); cap = setTimeout(end, player.duration * 1000 + 1500); } };
+      player.onloadedmetadata = () => { if (isFinite(player.duration)) { pclear(cap); cap = ptimeout(end, player.duration * 1000 + 1500); } };
       player.src = url;
-      player.play().catch(fail);
+      // AbortError = la frase se interrumpió o se pausó (otra frase, cambio de pantalla o app en
+      // segundo plano): no es una falla, así que no se usa la voz de respaldo.
+      player.play().catch((e) => { if (!(e && e.name === 'AbortError')) fail(); });
     });
   }
   api.recordedCount = () => Object.keys(recorded).length;
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden) { if (!player.paused) { player.pause(); player._resume = true; } }
-    else if (player._resume) { player._resume = false; player.play().catch(() => {}); }
+    if (document.hidden) {
+      if (!player.paused) { player.pause(); player._resume = true; }
+      timers.forEach(t => { clearTimeout(t.id); t.left -= Date.now() - t.start; });
+    } else {
+      if (player._resume) { player._resume = false; player.play().catch(() => {}); }
+      timers.forEach(t => { t.start = Date.now(); t.id = setTimeout(t.run, Math.max(0, t.left)); });
+    }
   });
 
   // Dice una o varias frases, una tras otra. Cada frase puede ser texto o {t, pitch, rate, who}
@@ -269,10 +292,10 @@ const Voice = (() => {
       if (api.onLine) api.onLine(l.t, l);
       // Si la voz se atora, seguir de todos modos para que el juego nunca se quede esperando.
       let moved = false;
-      const go = () => { if (!moved) { moved = true; clearTimeout(safety); next(); } };
+      const go = () => { if (!moved) { moved = true; pclear(safety); next(); } };
       const file = fileFor(l.t);
       // Los audios avisan solos cuando terminan (ver playVoice); este es solo un tope.
-      const safety = setTimeout(go, file ? 20000 : l.t.length * 110 + 3000);
+      const safety = ptimeout(go, file ? 20000 : l.t.length * 110 + 3000);
       if (file) playVoice(file).then(go, () => { if (my === seq) speak(l, go); });
       else speak(l, go);
     };
@@ -312,7 +335,7 @@ const Voice = (() => {
     // El reproductor de frases se "despierta" tocando un audio mudo dentro del toque.
     if (!playerReady && !api.speaking) {
       playerReady = true;
-      player.src = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=';
+      player.src = Sound.silentUrl();
       // Solo se reintenta si el aparato lo negó; si otra frase lo interrumpió, ya quedó despierto.
       player.play().catch((e) => { if (e && e.name === 'NotAllowedError') playerReady = false; });
     }
