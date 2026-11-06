@@ -157,12 +157,16 @@
 
   // Árbol de la sabana (acacia de copa plana).
   A.acacia = (x, y, s = 1) => `<g transform="translate(${x},${y}) scale(${s})">${line('M-6,0 L-4,-120 L-44,-170 M-4,-120 L32,-182 M-2,-64 L40,-112', '#6d4126', 16)}
-    <ellipse cx="-24" cy="-184" rx="112" ry="30" fill="#7c9a3a"/><ellipse cx="36" cy="-200" rx="92" ry="26" fill="#8bac45"/></g>`;
+    <ellipse cx="0" cy="2" rx="80" ry="12" fill="#5d3a10" opacity=".18"/>
+    <ellipse cx="-24" cy="-184" rx="112" ry="30" fill="#6f8d33"/><ellipse cx="36" cy="-200" rx="92" ry="26" fill="#8bac45"/>
+    <ellipse cx="10" cy="-210" rx="70" ry="12" fill="#c5dd7a" opacity=".55"/><ellipse cx="-30" cy="-172" rx="96" ry="14" fill="#000" opacity=".1"/></g>`;
   // Sabana dorada: cielo rosado, sol del atardecer, lomitas y pasto alto.
   A.savanna = (ground = 600) => {
     let s = `<defs><linearGradient id="savSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffb3c4"/><stop offset=".55" stop-color="#ffd59e"/><stop offset="1" stop-color="#fff1c9"/></linearGradient></defs>`;
-    s += `<rect width="1600" height="900" fill="url(#savSky)"/>${A.sun(1180, 190)}`;
-    s += `<path d="M0,${ground - 60} C200,${ground - 140} 420,${ground - 90} 640,${ground - 120} C900,${ground - 160} 1100,${ground - 80} 1300,${ground - 130} C1450,${ground - 160} 1550,${ground - 110} 1600,${ground - 120} L1600,900 L0,900 Z" fill="#f2c56c"/>`;
+    s += `<rect width="1600" height="900" fill="url(#savSky)"/><circle cx="1180" cy="190" r="420" fill="url(#sunGlow)"/>`;
+    s += [[-60, 300], [80, 240], [230, 280]].map(([a, w]) => `<path d="M${1180 + a},120 L${1180 + a - w * 2},${ground} L${1180 + a - w * 2 + w * .45},${ground} Z" fill="url(#ray)" opacity=".5"/>`).join('') + A.sun(1180, 190);
+    s += `<path d="M0,${ground - 60} C200,${ground - 140} 420,${ground - 90} 640,${ground - 120} C900,${ground - 160} 1100,${ground - 80} 1300,${ground - 130} C1450,${ground - 160} 1550,${ground - 110} 1600,${ground - 120} L1600,900 L0,900 Z" fill="#efbd63"/>`;
+    s += `<rect y="${ground - 200}" width="1600" height="200" fill="url(#mist)" opacity=".5"/>`;
     s += A.acacia(820, ground - 95, .45) + A.acacia(1500, ground - 70, .7);
     s += A.ground(ground, '#e8b84e');
     s += A.acacia(170, ground + 10, .95);

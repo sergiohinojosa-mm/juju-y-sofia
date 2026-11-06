@@ -15,18 +15,75 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Pixelify+Sans:wght@600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=27">
+<link rel="stylesheet" href="css/style.css?v=29">
 </head>
 <body>
 <svg id="stage" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#6fd6ff"/>
-      <stop offset="1" stop-color="#e3fbff"/>
+      <stop offset="0" stop-color="#36b0ea"/>
+      <stop offset=".55" stop-color="#9fe2fb"/>
+      <stop offset="1" stop-color="#fff1d0"/>
     </linearGradient>
     <linearGradient id="river" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#5ccbff"/>
-      <stop offset="1" stop-color="#1e88e5"/>
+      <stop offset="0" stop-color="#66d3f2"/>
+      <stop offset=".45" stop-color="#2aa6dc"/>
+      <stop offset="1" stop-color="#11709f"/>
+    </linearGradient>
+    <!-- Luz y volumen: brillo arriba a la izquierda y sombra suave abajo, para ponerlos encima de cualquier forma -->
+    <radialGradient id="shine" cx=".35" cy=".3" r=".7">
+      <stop offset="0" stop-color="#fff" stop-opacity=".6"/>
+      <stop offset=".6" stop-color="#fff" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="shade" cx=".45" cy=".25" r=".85">
+      <stop offset=".55" stop-color="#000" stop-opacity="0"/>
+      <stop offset="1" stop-color="#000" stop-opacity=".22"/>
+    </radialGradient>
+    <radialGradient id="sunGlow">
+      <stop offset="0" stop-color="#fffbe6" stop-opacity=".95"/>
+      <stop offset=".3" stop-color="#fff2b0" stop-opacity=".55"/>
+      <stop offset="1" stop-color="#fff2b0" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="ray" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fffbe6" stop-opacity=".45"/>
+      <stop offset="1" stop-color="#fffbe6" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="mist" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff" stop-opacity="0"/>
+      <stop offset="1" stop-color="#fff" stop-opacity=".55"/>
+    </linearGradient>
+    <linearGradient id="grass" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#8ad66a"/>
+      <stop offset="1" stop-color="#3e9a48"/>
+    </linearGradient>
+    <linearGradient id="wood" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#d9a066"/>
+      <stop offset=".5" stop-color="#a7672f"/>
+      <stop offset="1" stop-color="#7a4720"/>
+    </linearGradient>
+    <linearGradient id="gloss" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff" stop-opacity=".65"/>
+      <stop offset="1" stop-color="#fff" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="groundShade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#000" stop-opacity="0"/>
+      <stop offset="1" stop-color="#000" stop-opacity=".2"/>
+    </linearGradient>
+    <radialGradient id="vignette" cx=".5" cy=".5" r=".75">
+      <stop offset=".6" stop-color="#3e2a12" stop-opacity="0"/>
+      <stop offset="1" stop-color="#3e2a12" stop-opacity=".28"/>
+    </radialGradient>
+    <linearGradient id="paper" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff6e3"/>
+      <stop offset="1" stop-color="#f7e2bd"/>
+    </linearGradient>
+    <linearGradient id="photoSky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5cc6f2"/>
+      <stop offset="1" stop-color="#e6f9ff"/>
+    </linearGradient>
+    <linearGradient id="titleG" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#ffe7a3"/>
     </linearGradient>
     <linearGradient id="water" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="#81d4fa"/>
@@ -47,12 +104,15 @@
   <p>¡Gira tu teléfono, Juju!</p>
 </div>
 
-<script src="audio/tts.js?v=27"></script>
-<script src="audio/frases.js?v=27"></script>
-<script src="js/audio.js?v=27"></script>
-<script src="js/art.js?v=27"></script>
-<script src="js/art2.js?v=27"></script>
-<script src="js/levels2.js?v=27"></script>
-<script src="js/game.js?v=27"></script>
+<script src="audio/tts.js?v=29"></script>
+<script src="audio/frases.js?v=29"></script>
+<script src="js/audio.js?v=29"></script>
+<script src="js/art.js?v=29"></script>
+<script src="js/art2.js?v=29"></script>
+<script src="js/art-personajes.js?v=29"></script>
+<script src="js/art-animales.js?v=29"></script>
+<script src="js/art-animales2.js?v=29"></script>
+<script src="js/levels2.js?v=29"></script>
+<script src="js/game.js?v=29"></script>
 </body>
 </html>

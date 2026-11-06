@@ -276,5 +276,117 @@ const Art = (() => {
     return s;
   };
 
+  // ===================== Estilo detallado =====================
+  // Luz que viene de arriba a la izquierda: cada figura lleva un brillo, una sombra suave encima
+  // y su sombra en el piso. La selva tiene capas (montañas con bruma, copas lejanas, rayos de sol).
+  const shineOn = (cx, cy, rx, ry, o = 1) => `<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="url(#shine)" opacity="${o}" pointer-events="none"/>`;
+  const shadeOn = (cx, cy, rx, ry, o = 1) => `<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="url(#shade)" opacity="${o}" pointer-events="none"/>`;
+  const floorShadow = (w, y = 0) => `<ellipse cx="0" cy="${y}" rx="${w}" ry="${w * .16}" fill="#0b3016" opacity=".18"/>`;
+
+  // Personajes: sombra en el piso, volumen en vestido y cara, y ojitos con doble brillo y pestañas.
+  const baseKid = A.kid;
+  A.kid = (o) => {
+    const g = baseKid(o);
+    const extra = shadeOn(0, -95, 72, 70, .9) + shineOn(-18, -228, 30, 22, .8) +
+      `<circle cx="-26" cy="-199" r="2.2" fill="#fff"/><circle cx="18" cy="-199" r="2.2" fill="#fff"/>` +
+      `<path d="M-31,-213 l-6,-5 M-29,-215 l-3,-7 M31,-213 l6,-5 M29,-215 l3,-7" stroke="#3a2214" stroke-width="2.5" stroke-linecap="round"/>`;
+    return `<g>${floorShadow(52, -2)}${g.slice(3, -4)}${extra}</g>`;
+  };
+
+  // Animales: sombra en el piso y brillo según el tamaño de cada uno.
+  const baseAnimal = A.animal;
+  A.animal = (id, mood = 'happy') => {
+    const art = baseAnimal(id, mood);
+    const b = ANIMALS[id] && ANIMALS[id].box;
+    if (!art || !b) return art;
+    return floorShadow(b.w * .38, -2) + art + shineOn(b.cx - b.w * .14, b.cy - b.w * .16, b.w * .26, b.w * .18, .9) + shadeOn(b.cx, b.cy, b.w * .5, b.w * .48, .7);
+  };
+
+  A.tree = (x, y, s = 1, c1 = '#4caf50', c2 = '#2e7d32') => `<g transform="translate(${x},${y}) scale(${s})">
+    ${floorShadow(95, 2)}
+    <path d="M-24,0 C-18,-90 -26,-180 -13,-262 L15,-262 C26,-180 19,-90 25,0 Z" fill="#7b4a2a"/>
+    <path d="M-7,-30 C-3,-110 -11,-170 -3,-240 M11,-20 C13,-80 7,-140 13,-210" stroke="#5a3418" stroke-width="5" fill="none" opacity=".55"/>
+    <path d="M-24,0 C-18,-90 -26,-180 -13,-262 L-4,-262 C-14,-180 -8,-90 -10,0 Z" fill="#a06a40" opacity=".55"/>
+    <circle cx="-72" cy="-260" r="82" fill="${c2}"/><circle cx="72" cy="-266" r="88" fill="${c2}"/>
+    <circle cx="0" cy="-334" r="98" fill="${c1}"/><circle cx="-38" cy="-244" r="62" fill="${c1}"/><circle cx="46" cy="-236" r="56" fill="${c1}"/>
+    <circle cx="-34" cy="-366" r="46" fill="#9be07a" opacity=".5"/><circle cx="-88" cy="-286" r="30" fill="#9be07a" opacity=".35"/><circle cx="24" cy="-292" r="24" fill="#9be07a" opacity=".3"/>
+    ${shadeOn(10, -290, 175, 150)}
+    <path d="M70,-200 C82,-160 60,-120 76,-80" stroke="#2e7d32" stroke-width="5" fill="none" stroke-linecap="round"/>
+    <ellipse cx="82" cy="-150" rx="9" ry="5" fill="#43a047" transform="rotate(-30 82 -150)"/><ellipse cx="66" cy="-112" rx="9" ry="5" fill="#43a047" transform="rotate(30 66 -112)"/></g>`;
+
+  A.leaf = (x, y, s, rot, c) => `<g transform="translate(${x},${y}) rotate(${rot}) scale(${s})">
+    <path d="M0,0 C30,-48 104,-58 164,-20 C104,18 36,24 0,0Z" fill="${c}"/>
+    <path d="M0,0 C30,-48 104,-58 164,-20 C110,-30 50,-28 0,0Z" fill="#fff" opacity=".13"/>
+    <path d="M0,0 C36,20 104,18 164,-20 C104,4 40,8 0,0Z" fill="#000" opacity=".12"/>
+    <path d="M4,-1 C55,-16 105,-22 158,-20" stroke="rgba(255,255,255,.5)" stroke-width="4" fill="none" stroke-linecap="round"/>
+    ${[34, 62, 90, 118].map(v => `<path d="M${v},${-4 - v * .1} q14,-14 30,-20 M${v},${-4 - v * .1} q12,12 26,14" stroke="rgba(255,255,255,.3)" stroke-width="2.5" fill="none" stroke-linecap="round"/>`).join('')}</g>`;
+
+  A.bush = (x, y, s = 1, c = '#4caf50') => `<g transform="translate(${x},${y}) scale(${s})">
+    ${floorShadow(86, 2)}
+    <circle cx="-42" cy="-22" r="44" fill="${c}"/><circle cx="38" cy="-26" r="48" fill="${c}"/><circle cx="0" cy="-50" r="50" fill="${c}"/><rect x="-84" y="-30" width="168" height="30" rx="10" fill="${c}"/>
+    <circle cx="-16" cy="-68" r="22" fill="#fff" opacity=".18"/><circle cx="-56" cy="-36" r="14" fill="#fff" opacity=".14"/>
+    ${shadeOn(0, -40, 95, 60)}</g>`;
+
+  A.ground = (y, c) => {
+    const edge = `M0,${y} C300,${y - 30} 600,${y + 20} 900,${y - 10} C1200,${y - 35} 1400,${y + 10} 1600,${y - 15}`;
+    let s = `<path d="${edge} L1600,900 L0,900 Z" fill="${c || 'url(#grass)'}"/><path d="${edge} L1600,900 L0,900 Z" fill="url(#groundShade)"/>`;
+    s += `<path d="${edge}" stroke="${c ? '#fff1b8' : '#b5ec8e'}" stroke-width="6" fill="none" opacity=".7"/>`;
+    // matitas de pasto
+    for (let k = 0; k < 26; k++) {
+      const gx = (k * 173) % 1600 + 20, gy = y + 30 + ((k * 97) % 230);
+      s += `<path d="M${gx},${gy} q-4,-18 -12,-24 M${gx},${gy} q0,-22 2,-30 M${gx},${gy} q6,-16 14,-22" stroke="${c ? '#a8812f' : '#2f8a3c'}" stroke-width="3.5" fill="none" stroke-linecap="round" opacity=".55"/>`;
+    }
+    return s;
+  };
+
+  A.jungle = (ground = 620) => {
+    const g = ground;
+    let s = `<rect width="1600" height="900" fill="url(#sky)"/>`;
+    s += `<circle cx="1330" cy="110" r="380" fill="url(#sunGlow)"/>`;
+    s += [[-40, 330], [110, 260], [260, 300], [420, 240]].map(([a, w]) => `<path d="M${1330 + a},40 L${1330 + a - w * 2.2},${g} L${1330 + a - w * 2.2 + w * .45},${g} Z" fill="url(#ray)" opacity=".55"/>`).join('');
+    // nubes suaves
+    s += [[220, 120, 1], [640, 80, .8], [1040, 150, .7]].map(([x, y, k]) => `<g transform="translate(${x},${y}) scale(${k})" opacity=".85"><ellipse rx="90" ry="26" fill="#fff"/><ellipse cx="-40" cy="-16" rx="44" ry="30" fill="#fff"/><ellipse cx="30" cy="-22" rx="52" ry="36" fill="#fff"/></g>`).join('');
+    // montañas lejanas con bruma
+    s += `<path d="M0,${g - 170} C160,${g - 270} 300,${g - 210} 420,${g - 260} C560,${g - 320} 700,${g - 220} 860,${g - 250} C1000,${g - 290} 1150,${g - 200} 1300,${g - 240} C1420,${g - 270} 1520,${g - 220} 1600,${g - 240} L1600,${g} L0,${g} Z" fill="#93cfb1"/>`;
+    s += `<rect y="${g - 330}" width="1600" height="330" fill="url(#mist)" opacity=".6"/>`;
+    // copas lejanas
+    let c = '';
+    for (let x = -40; x < 1680; x += 64) c += `<circle cx="${x}" cy="${g - 96 - ((x * 7) % 46)}" r="${58 + ((x * 13) % 32)}" fill="#4fa86e"/>`;
+    s += c + `<rect y="${g - 120}" width="1600" height="120" fill="#4fa86e"/>` + `<rect y="${g - 160}" width="1600" height="160" fill="url(#mist)" opacity=".25"/>`;
+    // pajaritos a lo lejos
+    s += [[520, 190], [560, 210], [880, 160]].map(([x, y]) => `<path d="M${x - 12},${y} q6,-8 12,0 q6,-8 12,0" stroke="#3a6b5a" stroke-width="3" fill="none" stroke-linecap="round" opacity=".7"/>`).join('');
+    [[90, .8], [300, .62], [1180, .66], [1520, .85]].forEach(([x, sc]) => { s += A.tree(x, g + 20, sc); });
+    s += A.ground(g);
+    s += A.bush(210, g + 70, .8) + A.bush(1380, g + 60, .9, '#43a047');
+    s += A.flower(320, g + 90) + A.flower(1250, g + 110, '#ff8a65') + A.flower(760, g + 140, '#ba68c8') + A.flower(560, g + 70, '#ffd23f', .8);
+    return s;
+  };
+
+  A.river = (y, h) => {
+    let s = `<rect y="${y}" width="1600" height="${h}" fill="url(#river)"/><rect y="${y}" width="1600" height="14" fill="#0d5f86" opacity=".28"/>`;
+    s += `<rect y="${y + 14}" width="1600" height="6" fill="#bff0ff" opacity=".35"/>`;
+    for (let k = 0; k < 34; k++) {
+      const x = (k * 211) % 1600, yy = y + 40 + ((k * 67) % Math.max(40, h - 60)), w = 30 + (k * 17) % 70;
+      s += `<rect x="${x}" y="${yy}" width="${w}" height="5" rx="2.5" fill="#fff" opacity="${(.25 + (k % 4) * .1).toFixed(2)}"/>`;
+    }
+    s += Array.from({ length: 4 }, (_, r) => Array.from({ length: 9 }, (_, cc) => `<path d="M${cc * 200 + (r % 2) * 100 + 30},${y + 50 + r * 70} q20,-12 40,0" stroke="#fff" stroke-width="3" fill="none" opacity=".45"/>`).join('')).join('');
+    // nenúfares con flor
+    s += [[980, y + 230, 1], [1110, y + 175, .7], [190, y + 250, .8]].map(([x, yy, k]) => `<g transform="translate(${x},${yy}) scale(${k})">
+      <ellipse rx="56" ry="18" fill="#0d5f86" opacity=".25" cy="6"/><path d="M0,0 L54,-6 A56,18 0 1 1 52,6 Z" fill="#4caf50"/><ellipse cx="-14" cy="-4" rx="30" ry="8" fill="#81c784" opacity=".6"/>
+      ${A.flower(-6, -10, '#ff8fb8', 1.1)}</g>`).join('');
+    return s;
+  };
+
+  // Balsa: troncos con textura de madera, amarres de cuerda y sombra en el agua.
+  const baseRaft = A.raft;
+  A.raft = (opts = {}) => {
+    let s = baseRaft(opts);
+    // troncos con degradado de madera, vetas y cuerdas trenzadas
+    s = s.replace(/fill="#b0743a"/, 'fill="url(#wood)"').replace(/fill="#8d5a2b"/, 'fill="url(#wood)"');
+    s = s.replace(/<rect x="(-?[\d.]+)" y="-12" width="10" height="64" rx="4" fill="(#f1d28a|#ffe082)"\/>/g,
+      (m, x, c) => `<rect x="${x}" y="-12" width="12" height="64" rx="5" fill="${c}"/><path d="M${+x},-4 l12,6 M${+x},12 l12,6 M${+x},28 l12,6" stroke="#b8935a" stroke-width="2"/>`);
+    return s;
+  };
+
   return A;
 })();

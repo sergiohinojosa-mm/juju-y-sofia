@@ -247,9 +247,11 @@
     const top = bubblePos === 'top';
     const px = 92, py = top ? 210 : 808, bx = 168, by = top ? 160 : 866 - h;
     hud.innerHTML = `<g class="bubble-in">
+      <path d="M${bx + 6},${py - 18} L${bx - 26},${py} L${bx + 6},${py + 18} Z" fill="#fff" stroke="#66bb6a" stroke-width="5" stroke-linejoin="round" filter="url(#shadow)"/>
       <rect x="${bx}" y="${by}" width="${w}" height="${h}" rx="28" fill="#fff" stroke="#66bb6a" stroke-width="5" filter="url(#shadow)"/>
+      <rect x="${bx + 3}" y="${by + 3}" width="${w - 6}" height="${Math.min(26, h / 3)}" rx="22" fill="#e8f7e9" opacity=".8"/>
       <text x="${bx + padX}" y="${by + padY + 30}" font-size="32" font-weight="600" fill="#2d3b2d">${lines.map((l, i) => `<tspan x="${bx + padX}" dy="${i ? lh : 0}">${esc(l)}</tspan>`).join('')}</text>
-      <g transform="translate(${px},${py})"><circle r="62" fill="${who ? '#fff3c4' : '#c8e6c9'}" stroke="#fff" stroke-width="6" filter="url(#shadow)"/>
+      <g transform="translate(${px},${py})"><circle r="62" fill="${who ? '#fff3c4' : '#c8e6c9'}" stroke="#fff" stroke-width="6" filter="url(#shadow)"/><circle r="56" fill="url(#shine)"/>
         <g clip-path="url(#portraitClip)">${who ? Art.thumb(who, 96) : `<g transform="translate(0,128) scale(.62)">${Art.sofia()}</g>`}</g></g></g>`;
   }
   Voice.onLine = (text, line) => { clearTimeout(hideTimer); showBubble(text, line && line.who); };
@@ -334,7 +336,7 @@
   ICONS.mute = ICONS.music + '<path d="M-34,-34 L34,34" stroke="#ff5252" stroke-width="8" stroke-linecap="round"/>';
   const emojiIcon = (e, size = 60) => `<text y="${size * .35}" text-anchor="middle" font-size="${size}">${e}</text>`;
   const button = (id, x, y, icon, fill = '#66bb6a', r = 54, cls = '') =>
-    `<g id="${id}" transform="translate(${x},${y})"><g class="${cls}"><circle r="${r}" fill="${fill}" stroke="#fff" stroke-width="6" filter="url(#shadow)"/><g transform="scale(${(r / 54).toFixed(2)})">${ICONS[icon] || emojiIcon(icon)}</g></g></g>`;
+    `<g id="${id}" transform="translate(${x},${y})"><g class="${cls}"><circle r="${r}" fill="${fill}" stroke="#fff" stroke-width="6" filter="url(#shadow)"/><circle r="${r - 3}" fill="url(#shade)"/><ellipse cy="${(-r * .45).toFixed(1)}" rx="${(r * .62).toFixed(1)}" ry="${(r * .32).toFixed(1)}" fill="url(#gloss)"/><g transform="scale(${(r / 54).toFixed(2)})">${ICONS[icon] || emojiIcon(icon)}</g></g></g>`;
   const musicButton = (x = 1400, y = 80) => button('musicBtn', x, y, state.music ? 'music' : 'mute', '#26a69a');
   function wireMusic() {
     onTap($('#musicBtn'), () => {
@@ -343,18 +345,21 @@
       $('#musicBtn g g').innerHTML = ICONS[state.music ? 'music' : 'mute'];
     });
   }
-  const title = (x, y, txt, size) => `<text x="${x}" y="${y}" text-anchor="middle" font-size="${size}" font-weight="800" fill="#fff" stroke="#1b5e20" stroke-width="${Math.round(size / 6)}" paint-order="stroke" stroke-linejoin="round">${txt}</text>`;
+  const title = (x, y, txt, size) => `<text x="${x}" y="${y}" text-anchor="middle" font-size="${size}" font-weight="800" fill="url(#titleG)" filter="url(#shadow)" stroke="#1b5e20" stroke-width="${Math.round(size / 6)}" paint-order="stroke" stroke-linejoin="round">${txt}</text>`;
   const raftArt = (extra = {}) => Art.raft(Object.assign({ gifts: state.rescued, accessory: accessory() }, extra));
 
   // Foto de Polaroid: familia + Juju + Sofía. Centrada en el origen (460x540).
   function polaroid(L) {
     return `<rect x="-230" y="-270" width="460" height="540" rx="14" fill="#fff" filter="url(#shadow)"/>
-      <rect x="-200" y="-240" width="400" height="400" fill="#bfefff"/><rect x="-200" y="80" width="400" height="80" fill="#8fd694"/>
+      <rect x="-200" y="-240" width="400" height="400" fill="url(#photoSky)"/><circle cx="140" cy="-190" r="90" fill="url(#sunGlow)"/>
+      <path d="M-200,90 C-100,70 60,96 200,74 L200,160 L-200,160 Z" fill="url(#grass)"/>
+      <rect x="-200" y="-240" width="400" height="400" fill="url(#shade)" opacity=".5"/>
       <g transform="translate(-160,150) scale(.4)">${Art.juju({ accessory: accessory() })}</g>
       <g transform="translate(165,150) scale(.4)">${Art.sofia({ cheer: true })}</g>
       <g transform="translate(0,40)">${Art.family(L.id, 230)}</g>
       <path d="M-20,-190 C-50,-215 -40,-240 -20,-226 C0,-240 10,-215 -20,-190 Z" fill="#ff5fa2"/>
-      <text y="225" text-anchor="middle" font-size="34" font-weight="800" fill="#5d4037">${L.name}</text>`;
+      <text y="225" text-anchor="middle" font-size="34" font-weight="800" fill="#5d4037">${L.name}</text>
+      <rect x="-70" y="-290" width="140" height="42" rx="6" fill="#ffd6e9" opacity=".85" transform="rotate(-4)"/>`;
   }
 
   // ================= ESCENAS =================
@@ -370,7 +375,7 @@
       ${title(800, 165, 'Juju y Sofía', 150)}
       ${title(800, 250, '¡Al rescate de los bebés de la selva!', 54)}
       <g id="playBtn" transform="translate(1210,560)"><g class="pulse">
-        <rect x="-190" y="-70" width="380" height="140" rx="70" fill="#ff5fa2" stroke="#fff" stroke-width="8" filter="url(#shadow)"/>
+        <rect x="-190" y="-70" width="380" height="140" rx="70" fill="#ff5fa2" stroke="#fff" stroke-width="8" filter="url(#shadow)"/><rect x="-184" y="-64" width="368" height="128" rx="64" fill="url(#shade)"/><rect x="-160" y="-60" width="320" height="52" rx="26" fill="url(#gloss)"/>
         <path d="M-30,-40 L45,0 L-30,40 Z" fill="#fff"/></g></g>
       ${button('albumBtn', 1520, 80, 'album', '#ff9800')}
       ${musicButton(1400, 80)}
@@ -469,7 +474,7 @@
         : lion ? `<text y="24" text-anchor="middle" font-size="66" opacity="${(.35 + .15 * n).toFixed(2)}">🦁</text>`
         : `<text y="26" text-anchor="middle" font-size="70" font-weight="800" fill="${isNext ? '#ff5fa2' : '#b0bec5'}">?</text>`;
       markers += `<g class="stop" data-i="${i}" transform="translate(${x},${y})"><g class="${isNext ? 'pulse' : ''}">
-        <circle r="${lion ? 70 : 62}" fill="${lion ? '#fff8e1' : '#fff'}" stroke="${ring}" stroke-width="10" filter="url(#shadow)"/>${inner}</g>
+        <circle r="${lion ? 70 : 62}" fill="${lion ? '#fff8e1' : '#fff'}" stroke="${ring}" stroke-width="10" filter="url(#shadow)"/>${inner}<ellipse cy="${lion ? -40 : -36}" rx="${lion ? 42 : 38}" ry="16" fill="url(#gloss)" opacity=".7"/></g>
         ${done ? `<g transform="translate(46,-46)"><circle r="24" fill="#ff5fa2" stroke="#fff" stroke-width="4"/><path d="M0,10 C-18,-4 -12,-20 0,-11 C12,-20 18,-4 0,10 Z" fill="#fff"/></g>` : ''}</g>`;
     });
     // La balsa espera antes de la siguiente parada.
@@ -478,13 +483,20 @@
     const goal = next === null ? STOPS[Math.min(PLAYABLE, STOPS.length - 1)] : STOPS[next];
     const rx = (prev[0] + goal[0]) / 2, ry = (prev[1] + goal[1]) / 2 + 10;
     sceneEl.innerHTML = `
-      <rect width="1600" height="900" fill="#7ccf6e"/>
+      <rect width="1600" height="900" fill="url(#grass)"/>
+      ${Array.from({ length: 70 }, (_, k) => `<circle cx="${(k * 233) % 1600}" cy="${(k * 151) % 900}" r="${3 + (k % 4)}" fill="#fff" opacity=".08"/>`).join('')}
+      <path d="M0,0 L420,0 C360,60 260,90 160,130 C90,160 30,150 0,170 Z" fill="#5fae6a" opacity=".6"/>
       <path d="M1180,0 C1260,250 1300,480 1600,600 L1600,0 Z" fill="#f4cf62"/>
+      <path d="M1180,0 C1260,250 1300,480 1600,600 L1600,0 Z" fill="url(#groundShade)" opacity=".6"/>
+      <path d="M1200,40 C1250,30 1270,70 1310,60" stroke="#e0a93a" stroke-width="5" fill="none" opacity=".5"/>
       ${[[120, 300], [300, 180], [520, 330], [700, 200], [900, 300], [1000, 140], [260, 860], [700, 860], [1100, 820], [880, 470]].map(([x, y]) => Art.tree(x, y, .3)).join('')}
       ${[[1400, 150], [1520, 470], [1330, 300]].map(([x, y]) => `<g transform="translate(${x},${y})"><rect x="-6" y="-60" width="12" height="60" fill="#8d5a2b"/><ellipse cx="0" cy="-66" rx="60" ry="18" fill="#9ccc65"/></g>`).join('')}
+      <path d="${river}" stroke="#e8d39a" stroke-width="116" fill="none" stroke-linecap="round" opacity=".9"/>
       <path d="${river}" stroke="#1e88e5" stroke-width="92" fill="none" stroke-linecap="round"/>
       <path d="${river}" stroke="#5ccbff" stroke-width="64" fill="none" stroke-linecap="round"/>
+      <path d="${river}" stroke="#a8e8ff" stroke-width="20" fill="none" stroke-linecap="round" opacity=".5"/>
       <path class="flow" d="${river}" stroke="#e1f5fe" stroke-width="6" fill="none" stroke-dasharray="20 30"/>
+      <rect width="1600" height="900" fill="url(#vignette)" pointer-events="none"/>
       ${markers}
       <g transform="translate(${rx},${ry}) scale(${(.28 * 420 / (420 + state.rescued.length * 74)).toFixed(3)})"><g class="bob">${raftArt()}</g></g>
       ${title(800, 90, 'El río de la selva', 64)}
@@ -546,12 +558,17 @@
     const waves = Array.from({ length: 4 }, (_, r) => Array.from({ length: 10 }, (_, c) => `<path d="M${c * 200 + (r % 2) * 100},${450 + r * 100} q20,-12 40,0" stroke="#fff" stroke-width="4" fill="none" opacity=".5"/>`).join('')).join('');
     sceneEl.innerHTML = `
       <rect width="1600" height="900" fill="url(#sky)"/>
+      <circle cx="1300" cy="90" r="320" fill="url(#sunGlow)"/>
+      <path d="M0,330 C200,250 380,300 560,260 C760,220 940,300 1120,250 C1300,210 1460,280 1600,250 L1600,420 L0,420 Z" fill="#93cfb1"/>
+      <rect y="250" width="1600" height="170" fill="url(#mist)" opacity=".6"/>
       <g id="bank">${tile(0)}${tile(1600)}</g>
-      <rect y="400" width="1600" height="450" fill="url(#river)"/>
+      <rect y="392" width="1600" height="20" fill="#e8d39a"/>
+      <rect y="400" width="1600" height="450" fill="url(#river)"/><rect y="400" width="1600" height="12" fill="#0d5f86" opacity=".3"/>
       <g id="waves">${waves}${waves.replace(/M(\d+)/g, (m, x) => 'M' + (+x + 2000))}</g>
       <g id="objs"></g>
       <g id="raftPos" transform="translate(${RAFT_X},${LANES[1]})"><g class="bob"><g id="wob"><g transform="scale(.72)" id="raftArt">${raftArt()}</g></g></g></g>
-      <path d="M0,850 C400,830 1100,870 1600,845 L1600,900 L0,900 Z" fill="#6cc070"/>
+      <path d="M0,842 C400,822 1100,862 1600,837 L1600,900 L0,900 Z" fill="#e8d39a"/>
+      <path d="M0,850 C400,830 1100,870 1600,845 L1600,900 L0,900 Z" fill="url(#grass)"/>
       <rect x="460" y="858" width="680" height="24" rx="12" fill="rgba(255,255,255,.7)"/>
       <rect id="prog" x="460" y="858" width="24" height="24" rx="12" fill="#ff5fa2"/>
       <text x="1160" y="884" font-size="40">🚩</text>
@@ -1021,7 +1038,9 @@
           : `<text y="10" text-anchor="middle" font-size="100" font-weight="800" fill="#cfd8dc">?</text>`}</g></g>`;
     });
     sceneEl.innerHTML = `
-      <rect width="1600" height="900" fill="#ffefd2"/>
+      <rect width="1600" height="900" fill="url(#paper)"/>
+      ${Array.from({ length: 90 }, (_, k) => `<circle cx="${(k * 179) % 1600}" cy="${(k * 113) % 900}" r="4" fill="#e9c98f" opacity=".45"/>`).join('')}
+      <rect width="1600" height="900" fill="url(#vignette)"/>
       ${Art.leaf(-20, 880, 2, -40, '#a5d6a7')}${Art.leaf(1620, 900, 2, -140, '#a5d6a7')}
       ${title(800, 110, 'Álbum de la Selva', 80)}
       ${slots}
