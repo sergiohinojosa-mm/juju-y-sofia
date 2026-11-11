@@ -199,10 +199,13 @@
     // ---------- cara ----------
     const er = o.bigEyes ? 1.18 : 1, ex = 22, ey = -203, rx = +(9 * er).toFixed(1), ry = +(11 * er).toFixed(1);
     const irisG = lg('kidIr' + key(eyes), [[0, warm(eyes, .6)], [.55, eyes], [1, lt(eyes, .38)]]);
+    // los ojos van en un grupo aparte para poder parpadear
+    s += '<g class="blink">';
     s += [-1, 1].map(k => `<ellipse cx="${k * ex}" cy="${ey}" rx="${rx}" ry="${ry}" fill="${irisG}" stroke="${warm(eyes, .6)}" stroke-width="1.5"/>`).join('');
     const pr = +(rx * .5).toFixed(1), pry = +(ry * .52).toFixed(1);
     s += `<path d="${[-1, 1].map(k => `M${k * ex - pr},${ey - 1}a${pr},${pry} 0 1,0 ${2 * pr},0a${pr},${pry} 0 1,0 ${-2 * pr},0`).join('')}" fill="#1e0f08"/>`;
     s += `<path d="${[-1, 1].map(k => dot(+(k * ex - 3.3 * er).toFixed(1), +(ey - 4.6 * er).toFixed(1), +(3.7 * er).toFixed(1)) + dot(+(k * ex + 3.6 * er).toFixed(1), +(ey + 4.4 * er).toFixed(1), +(1.8 * er).toFixed(1))).join('')}" fill="#fff"/>`;
+    s += '</g>';
     // pestañas: párpado de arriba grueso y dos pestañitas hacia afuera
     const lash = [-1, 1].map(k => {
       const x0 = k * ex - rx - 1, x1 = k * ex + rx + 1, ou = k * (ex + rx);

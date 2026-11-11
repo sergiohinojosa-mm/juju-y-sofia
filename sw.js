@@ -1,7 +1,7 @@
 // Permite jugar sin internet una vez que el juego se abrió: primero intenta la red (para recibir
 // siempre la versión nueva) y, si no hay conexión, usa la copia guardada.
 // V es la misma versión de los ?v= de index.html; al activarse, se borran las copias anteriores.
-const V = 31;
+const V = 32;
 const CACHE = 'juju-y-sofia-v' + V;
 // Todo lo que el juego necesita para arrancar se guarda desde la instalación (las voces se guardan al oírse).
 const CORE = ['./', './index.html', './manifest.json', './icons/apple-touch-icon.png', 'css/style.css',

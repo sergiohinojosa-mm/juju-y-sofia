@@ -219,9 +219,28 @@ body { position: fixed; inset: 0; }
 }
 
 /* Menos movimiento si así está configurado el dispositivo. Va al final para ganarle a todo lo anterior. */
+/* Pétalos que caen meciéndose y brillo que cruza el botón de jugar */
+.petal { animation: petal 12s linear infinite; }
+@keyframes petal {
+  0% { transform: translate(0, 0) rotate(0deg); opacity: 0; } 8% { opacity: .95; }
+  25% { transform: translate(46px, 240px) rotate(120deg); } 50% { transform: translate(-30px, 480px) rotate(220deg); }
+  75% { transform: translate(40px, 720px) rotate(330deg); } 92% { opacity: .9; }
+  100% { transform: translate(0, 960px) rotate(430deg); opacity: 0; }
+}
+.shine-loop { animation: shineLoop 3.6s ease-in-out infinite; pointer-events: none; }
+@keyframes shineLoop { 0%, 55% { transform: translateX(-320px); } 100% { transform: translateX(320px); } }
+
+/* Vida en los dibujos: lianas que se mecen, ojos que parpadean y una respiración suave */
+.vine { transform-box: fill-box; transform-origin: 50% 0; animation: sway 6s ease-in-out infinite; }
+.blink { transform-box: fill-box; transform-origin: center; animation: blink 4.6s infinite; }
+@keyframes blink { 0%, 93%, 100% { transform: scaleY(1); } 96.5% { transform: scaleY(.08); } }
+.breathe { transform-box: fill-box; transform-origin: 50% 100%; animation: breathe 3.4s ease-in-out infinite; }
+@keyframes breathe { 0%, 100% { transform: scale(1, 1); } 50% { transform: scale(1.012, .984); } }
+
 @media (prefers-reduced-motion: reduce) {
   .wiggle, .pulse, .bob, .drift, .happy-jump, .flow, .idle, .halo, .halo-spin, .rays-spin, .twinkle, .flutter, .hand-tap, .tap-ring,
-  .qbob, .swing, .sparkle, .flap, .sway, .flit, .mote, .scene-in, .sweep { animation: none; }
+  .qbob, .swing, .sparkle, .flap, .sway, .flit, .mote, .scene-in, .sweep, .vine, .blink, .breathe, .petal { animation: none; }
+  .shine-loop { animation: none; opacity: 0; }
   .cloud-go, .bird-go { animation: none; transform: translateX(var(--x0)); }
   .confetti { display: none; }
 }

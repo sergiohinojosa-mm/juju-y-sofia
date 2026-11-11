@@ -55,8 +55,8 @@
   // Muchos puntitos en un solo <path>.
   const dots = (list) => list.map(([x, y, r]) => `M${f(x - r)},${y}a${r},${r} 0 1,0 ${f(2 * r)},0a${r},${r} 0 1,0 ${f(-2 * r)},0`).join('');
   // Ojo grande con dos brillitos.
-  const eye = (x, y, r) => C(x, y, r, U('Eye'), '#140a04', 1.5) + C(f(x + r * .32), f(y - r * .36), f(r * .38), '#fff') +
-    C(f(x - r * .36), f(y + r * .36), f(r * .17), '#fff', '', 0, ' opacity=".9"');
+  const eye = (x, y, r) => '<g class="blink">' + C(x, y, r, U('Eye'), '#140a04', 1.5) + C(f(x + r * .32), f(y - r * .36), f(r * .38), '#fff') +
+    C(f(x - r * .36), f(y + r * .36), f(r * .17), '#fff', '', 0, ' opacity=".9"') + '</g>';
   const blush = (x, y, rx, ry = rx * .65) => E(x, y, rx, f(ry), U('Blush'));
   const shine = (x, y, rx, ry, rot = -20, o = .35) => E(x, y, rx, ry, '#fff', '', 0, ` opacity="${o}" transform="rotate(${rot} ${x} ${y})"`);
   const tear = (x, y, s = 1) => `<path transform="translate(${x},${y}) scale(${s})" d="M0,-9 C-3,-3 -6,1 -6,4 A6,6 0 0 0 6,4 C6,1 3,-3 0,-9 Z" fill="#bfeaff" stroke="#5bbbe8" stroke-width="1.5"/>`;

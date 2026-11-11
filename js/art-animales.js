@@ -113,11 +113,13 @@
     // ojos rojos grandes
     for (const x of [-34, 34]) {
       const y = -106;
+      s += '<g class="blink">';
       s += `<circle cx="${x}" cy="${y}" r="19.5" fill="url(#an1FrogEye)" stroke="#8a0d14" stroke-width="1.6"/>`;
       s += `<ellipse cx="${x + 3}" cy="${y + 10}" rx="11" ry="5" fill="#ffb199" opacity=".45"/>`;
       s += `<ellipse cx="${x}" cy="${y + (sad ? 4 : 0)}" rx="6.5" ry="12" fill="#180808"/>`;
       if (sad) s += lid(x, y, 19.5, x < 0, 'url(#an1FrogSkin)', ol);
       s += sparkles(x, y, 19.5, sad);
+      s += '</g>';
       s += `<ellipse cx="${x - 12}" cy="${y - 20}" rx="7" ry="3.5" transform="rotate(-30 ${x - 12} ${y - 20})" fill="#fff" opacity=".45"/>`;
     }
     // carita
@@ -160,9 +162,11 @@
     s += blush(6, -133, 9, 5.5);
     const ex = 15, ey = -155, er = 12.5;
     s += `<ellipse cx="${ex + 1}" cy="${ey}" rx="21" ry="20" fill="url(#an1TouFace)" stroke="#1d8fc9" stroke-width="1.5"/>`;
+    s += '<g class="blink">';
     s += `<circle cx="${ex}" cy="${ey}" r="${er}" fill="url(#an1Iris)" stroke="${ink}" stroke-width="1.5"/>`;
     if (sad) s += lid(ex, ey, er, true, '#6fd0f5', '#1d6f9c');
     s += sparkles(ex, ey, er, sad);
+    s += '</g>';
     // pico grande y brillante con punta negra
     const bill = 'M30,-182 C74,-212 146,-204 176,-164 C166,-150 148,-148 126,-148 C92,-146 60,-142 32,-146 Z';
     s += `<path d="${bill}" fill="url(#an1TouBill)"/>`;
@@ -215,9 +219,11 @@
     for (const k of [-1, 1]) {
       s += `<path d="M${k * 5},-161 C${k * 6},-172 ${k * 26},-174 ${k * 36},-162 C${k * 43},-153 ${k * 41},-142 ${k * 34},-139 C${k * 25},-141 ${k * 7},-149 ${k * 5},-161 Z" fill="url(#an1SloMask)"/>`;
       const x = k * 21, y = -159, r = 8.5;
+      s += '<g class="blink">';
       s += `<circle cx="${x}" cy="${y}" r="${r}" fill="url(#an1Iris)" stroke="#1a0f08" stroke-width="1"/>`;
       if (sad) s += lid(x, y, r, k < 0, '#5a3820', '#2a170a');
       s += sparkles(x, y, r, sad);
+      s += '</g>';
     }
     s += blush(-31, -132, 8, 5) + blush(31, -132, 8, 5);
     s += `<path d="M-10,-143 C-10,-150 10,-150 10,-143 C10,-137 4,-133 0,-133 C-4,-133 -10,-137 -10,-143 Z" fill="#3a2414"/><ellipse cx="-3.5" cy="-145" rx="3.5" ry="2" fill="#fff" opacity=".55"/>`;

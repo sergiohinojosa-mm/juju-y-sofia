@@ -440,13 +440,18 @@
     sceneEl.innerHTML = `
       ${Art.jungle(600)}${Art.rainbow(1200, 600, 320)}
       ${Art.river(600, 300)}
+      ${Art.lily(215, 668, .8)}${Art.lily(905, 684, .9, '#fff59d', -.8)}${Art.lily(1105, 806, 1.1, '#ff8ac0', -1.5)}${Art.lily(1430, 716, .85, '#fff', -.4)}
       <g transform="translate(540,720)"><g class="bob">${raftArt()}</g></g>
       ${Art.foreground()}
       ${Art.flit(300, 420, '#ff8ac0', .55)}${Art.flit(1010, 380, '#ffd23f', .5, -7)}
+      ${Art.petals([[140, '#ff8ac0'], [430, '#fff'], [700, '#ffd23f'], [980, '#ff8ac0'], [1260, '#fff'], [1490, '#ffb3d1']])}
       ${title(800, 165, 'Juju y Sofía', 150)}
       ${title(800, 250, '¡Al rescate de los bebés de la selva!', 54)}
+      ${Art.glint(368, 92, 2)}${Art.glint(1238, 112, 1.6, -.6)}${Art.glint(1204, 204, 1.1, -1.1)}${Art.glint(402, 196, 1.2, -.9)}
       <g id="playBtn" transform="translate(1210,560)"><g class="pulse">
         <rect x="-190" y="-70" width="380" height="140" rx="70" fill="#ff5fa2" stroke="#fff" stroke-width="8" filter="url(#shadow)"/><rect x="-184" y="-64" width="368" height="128" rx="64" fill="url(#shade)"/><rect x="-160" y="-60" width="320" height="52" rx="26" fill="url(#gloss)"/>
+        <clipPath id="playClip"><rect x="-184" y="-64" width="368" height="128" rx="64"/></clipPath>
+        <g clip-path="url(#playClip)" pointer-events="none"><g class="shine-loop"><path d="M-10,-80 L44,-80 L0,80 L-54,80 Z" fill="#fff" opacity=".4"/></g></g>
         <path d="M-30,-40 L45,0 L-30,40 Z" fill="#fff"/></g></g>
       ${button('albumBtn', 1520, 80, 'album', '#ff9800')}
       ${musicButton(1400, 80)}
@@ -522,7 +527,7 @@
   }
 
   // ---------- Mapa del río ----------
-  const STOPS = [[230, 640], [380, 560], [580, 690], [770, 520], [960, 640], [1130, 460], [1300, 560], [1470, 330]];
+  const STOPS = [[230, 640], [380, 560], [580, 664], [770, 520], [960, 640], [1130, 460], [1300, 560], [1470, 330]];
   function smoothPath(pts) {
     let d = `M${pts[0][0]},${pts[0][1]}`;
     for (let i = 0; i < pts.length - 1; i++) {
@@ -532,7 +537,7 @@
     return d;
   }
   function map(opts = {}) {
-    bubblePos = 'bottom';
+    bubblePos = 'top';   // arriba, para no tapar las paradas del río
     const next = nextLevel();
     const river = smoothPath([[-40, 820], ...STOPS, [1640, 240]]);
     const n = state.rescued.length;
@@ -544,9 +549,14 @@
       const inner = done ? Art.family(L.id, 100)
         : lion ? `<text y="24" text-anchor="middle" font-size="66" opacity="${(.35 + .15 * n).toFixed(2)}">🦁</text>`
         : `<text y="26" text-anchor="middle" font-size="70" font-weight="800" fill="${isNext ? '#ff5fa2' : '#b0bec5'}">?</text>`;
-      markers += `<g class="stop" data-i="${i}" transform="translate(${x},${y})"><g class="${isNext ? 'pulse' : ''}">
+      // Luz detrás de la parada: rayos que giran en la siguiente y un resplandor dorado en la del león.
+      const glow = (lion ? `<circle r="118" fill="url(#sunGlow)" pointer-events="none"/>` : '')
+        + (isNext ? `<g class="rays-spin">${Art.rays(122, 12, '#fff59d', .6)}</g>` : '');
+      const spark = done ? Art.glint(-50, -42, 1.3, -i * .4)
+        : lion ? [[-80, -52, 13, 0], [84, -30, 10, -.5], [-66, 62, 9, -1]].map(([sx, sy, sz, d]) => `<g transform="translate(${sx},${sy})" pointer-events="none">${Art.star4(sz, 'twinkle', `animation-delay:${d}s`)}</g>`).join('') : '';
+      markers += `<g class="stop" data-i="${i}" transform="translate(${x},${y})">${glow}<g class="${isNext ? 'pulse' : ''}">
         <circle r="${lion ? 70 : 62}" fill="${lion ? '#fff8e1' : '#fff'}" stroke="${ring}" stroke-width="10" filter="url(#shadow)"/>${inner}<ellipse cy="${lion ? -40 : -36}" rx="${lion ? 42 : 38}" ry="16" fill="url(#gloss)" opacity=".7"/></g>
-        ${done ? `<g transform="translate(46,-46)"><circle r="24" fill="#ff5fa2" stroke="#fff" stroke-width="4"/><path d="M0,10 C-18,-4 -12,-20 0,-11 C12,-20 18,-4 0,10 Z" fill="#fff"/></g>` : ''}</g>`;
+        ${done ? `<g transform="translate(46,-46)"><circle r="24" fill="#ff5fa2" stroke="#fff" stroke-width="4"/><path d="M0,10 C-18,-4 -12,-20 0,-11 C12,-20 18,-4 0,10 Z" fill="#fff"/></g>` : ''}${spark}</g>`;
     });
     // La balsa espera antes de la siguiente parada.
     // Con todas las familias reunidas, la balsa espera entre las dos últimas paradas sin tapar al león.
@@ -761,7 +771,7 @@
         <g pointer-events="none"><g transform="translate(0,46)">${Art.contact(46, 0, .16)}</g></g>
         <g class="wiggle" style="animation-delay:${k * .4}s"><g class="idle" style="animation-delay:${k * .3}s">${Art.clue(L.clue)}</g></g>
         <g pointer-events="none">${Art.leaf(-80, 40, .7, -20, '#2e7d32')}${Art.leaf(70, 46, .6, 200, '#388e3c')}</g></g>`).join('')}</g>
-      <g id="mom"><g>${Art.animal(L.id)}</g></g>
+      <g id="mom"><g class="breathe">${Art.animal(L.id)}</g></g>
       <g id="baby"></g>
       <g id="playFront"></g>
       ${Art.foreground()}
@@ -777,7 +787,7 @@
       back: $('#playBack'), front: $('#playFront'), mom: momEl, baby: babyEl,
       say, later, tap: onTap, place, moveTo, alive,
       hint: (fn) => Hint.set(fn),
-      setArt(el, mood, cls = '') { el.innerHTML = `<g class="${cls}">${Art.animal(L.id, mood)}</g>`; },
+      setArt(el, mood, cls = '') { el.innerHTML = `<g class="${cls || 'breathe'}">${Art.animal(L.id, mood)}</g>`; },
       reunited,
       // Ayudas para los minijuegos de js/levels2.js
       mk, countPop, hearts, confetti, flash, burst, NUM, NUM_M, Hint, rescued: () => state.rescued.slice(),
@@ -1171,20 +1181,25 @@
         <path d="M-110,20 C-60,0 -20,15 30,5 C60,-2 90,10 110,2 L110,70 L-110,70 Z" fill="${lion ? '#edc76f' : '#7cc96b'}"/>
         <path d="M-110,46 C-50,32 20,48 110,34 L110,70 L-110,70 Z" fill="${lion ? '#dba945' : '#58b04f'}"/>`;
     LEVELS.forEach((L, i) => {
-      const x = 260 + (i % 4) * 360, y = 370 + Math.floor(i / 4) * 330;
+      // Las fotos dejan libre la franja de abajo, donde habla Sofía.
+      const x = 260 + (i % 4) * 360, y = 334 + Math.floor(i / 4) * 274;
       const done = !L.soon && isRescued(L.id), lion = i === LEVELS.length - 1;
-      slots += `<g class="slot" data-i="${i}" transform="translate(${x},${y})"><g transform="rotate(${i % 2 ? 3 : -3})">
+      slots += `<g class="slot" data-i="${i}" transform="translate(${x},${y})"><g transform="rotate(${i % 2 ? 3 : -3}) scale(.88)">
         <rect x="-125" y="-145" width="250" height="290" rx="10" fill="#fff" stroke="${lion ? '#ffb300' : '#e0d6c8'}" stroke-width="${lion ? 8 : 3}" filter="url(#shadow)"/>
         <rect x="-110" y="-130" width="220" height="200" fill="${done ? 'url(#photoSky)' : lion ? '#fff3c4' : '#eceff1'}"/>
-        ${done ? `${photoBack(lion)}<g transform="translate(0,-25)">${Art.family(L.id, 190)}</g><text y="118" text-anchor="middle" font-size="30" font-weight="800" fill="#5d4037">${L.name.split(' ')[0]}</text>`
+        ${done ? `${photoBack(lion)}<g transform="translate(0,-25)">${Art.family(L.id, 190)}</g><text y="118" text-anchor="middle" font-size="30" font-weight="800" fill="#5d4037">${L.name.split(' ')[0]}</text>${Art.sticker('heart', 108, 138, .5, 12, '#ff5fa2')}`
           : lion ? `<text y="0" text-anchor="middle" font-size="110" opacity=".5">🦁</text>`
-          : `<text y="10" text-anchor="middle" font-size="100" font-weight="800" fill="#cfd8dc">?</text>`}</g></g>`;
+          : `<text y="10" text-anchor="middle" font-size="100" font-weight="800" fill="#cfd8dc">?</text>`}
+        ${Art.tape(0, -146, i % 2 ? 5 : -5, ['#ff8ac0', '#ffd23f', '#81d4fa', '#b39ddb'][i % 4])}</g></g>`;
     });
     sceneEl.innerHTML = `
       <rect width="1600" height="900" fill="url(#paper)"/>
       ${Array.from({ length: 90 }, (_, k) => `<circle cx="${(k * 179) % 1600}" cy="${(k * 113) % 900}" r="4" fill="#e9c98f" opacity=".45"/>`).join('')}
       <rect width="1600" height="900" fill="url(#vignette)"/>
       ${Art.leaf(-20, 880, 2, -40, '#a5d6a7')}${Art.leaf(1620, 900, 2, -140, '#a5d6a7')}
+      ${Art.sticker('star', 292, 96, 1.1, -14)}${Art.sticker('heart', 1308, 100, 1, 12, '#ff5fa2')}${Art.sticker('flower', 1512, 232, 1.1, 8, '#ff8ac0')}
+      ${Art.sticker('heart', 84, 300, .9, -16, '#ff8ac0')}${Art.sticker('star', 1524, 520, 1, 16)}${Art.sticker('flower', 82, 560, 1, -10, '#b39ddb')}
+      ${Art.sticker('star', 1010, 800, .9, 10)}${Art.sticker('flower', 1250, 812, 1, -8, '#81d4fa')}${Art.sticker('heart', 1400, 786, .8, 14, '#ff5fa2')}
       ${title(800, 110, 'Álbum de la Selva', 80)}
       ${slots}
       ${button('backBtn', 80, 80, 'home', '#7e57c2')}
