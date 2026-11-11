@@ -187,7 +187,7 @@
 
   // Cada escena nueva invalida los temporizadores y animaciones de la anterior.
   let sceneAt = 0;
-  function go(fn, ...args) { token++; sceneAt = Date.now(); Voice.stop(); Hint.clear(); cleanup.forEach(f => f()); cleanup = []; fn(...args); }
+  function go(fn, ...args) { token++; sceneAt = Date.now(); Voice.stop(); Hint.clear(); cleanup.forEach(f => f()); cleanup = []; fn(...args); restart(sceneEl, 'scene-in'); }
   function alive() { const t = token; return () => t === token; }
   function later(fn, ms) { const ok = alive(); setTimeout(() => { if (ok()) fn(); }, ms); }
   function say(lines, onEnd) { const ok = alive(); Voice.say(lines, onEnd && (() => { if (ok()) onEnd(); })); }
@@ -239,16 +239,18 @@
   // Posición y animación de figuras (atributo transform = posición; nunca lleva clase animada).
   function place(el, p) { el._pos = Object.assign({ s: 1 }, p); el.setAttribute('transform', `translate(${p.x},${p.y}) scale(${p.s ?? 1})`); }
   function moveTo(el, to, ms, hop = 0, cb) {
-    const from = el._pos, ok = alive(), t0 = performance.now();
+    // Un movimiento nuevo sobre la misma figura cancela al anterior y sale de donde va la figura.
+    const from = el._pos, ok = alive(), t0 = performance.now(), id = el._mv = (el._mv || 0) + 1;
     const target = Object.assign({}, from, to);
     const step = (now) => {
-      if (!ok()) return;
+      if (!ok() || el._mv !== id) return;
       const u = Math.min(1, (now - t0) / ms);
       const e = u < .5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2;
       const x = from.x + (target.x - from.x) * e;
       const y = from.y + (target.y - from.y) * e - Math.sin(Math.PI * u) * hop;
       const s = from.s + (target.s - from.s) * e;
       el.setAttribute('transform', `translate(${x.toFixed(1)},${y.toFixed(1)}) scale(${s.toFixed(3)})`);
+      el._pos = Object.assign({}, target, { x, y: from.y + (target.y - from.y) * e, s });
       if (u < 1) requestAnimationFrame(step);
       else { el._pos = target; if (cb) cb(); }
     };
@@ -287,7 +289,9 @@
       if (Voice.speaking || portrait() || document.hidden) { this.timer = setTimeout(() => this.fire(), 2000); return; }
       const t = this.target();
       // Después de tres avisos con la manita ya no insiste.
-      if (!t || this.level >= 4) return;
+      if (this.level >= 4) return;
+      // Si lo que brilla todavía no está en pantalla, lo intenta de nuevo más tarde.
+      if (!t) { this.restart(); return; }
       this.remove();
       this.level++;
       const g = mk('g', { id: 'sparkle', 'pointer-events': 'none' });
@@ -438,6 +442,7 @@
       ${Art.river(600, 300)}
       <g transform="translate(540,720)"><g class="bob">${raftArt()}</g></g>
       ${Art.foreground()}
+      ${Art.flit(300, 420, '#ff8ac0', .55)}${Art.flit(1010, 380, '#ffd23f', .5, -7)}
       ${title(800, 165, 'Juju y Sofía', 150)}
       ${title(800, 250, '¡Al rescate de los bebés de la selva!', 54)}
       <g id="playBtn" transform="translate(1210,560)"><g class="pulse">
@@ -549,21 +554,17 @@
     const goal = next === null ? STOPS[Math.min(PLAYABLE, STOPS.length - 1)] : STOPS[next];
     const rx = (prev[0] + goal[0]) / 2, ry = (prev[1] + goal[1]) / 2 + 10;
     sceneEl.innerHTML = `
-      <rect width="1600" height="900" fill="url(#grass)"/>
-      ${Array.from({ length: 70 }, (_, k) => `<circle cx="${(k * 233) % 1600}" cy="${(k * 151) % 900}" r="${3 + (k % 4)}" fill="#fff" opacity=".08"/>`).join('')}
-      <path d="M0,0 L420,0 C360,60 260,90 160,130 C90,160 30,150 0,170 Z" fill="#5fae6a" opacity=".6"/>
-      <path d="M1180,0 C1260,250 1300,480 1600,600 L1600,0 Z" fill="#f4cf62"/>
-      <path d="M1180,0 C1260,250 1300,480 1600,600 L1600,0 Z" fill="url(#groundShade)" opacity=".6"/>
-      <path d="M1200,40 C1250,30 1270,70 1310,60" stroke="#e0a93a" stroke-width="5" fill="none" opacity=".5"/>
-      ${[[120, 300], [300, 180], [520, 330], [700, 200], [900, 300], [1000, 140], [260, 860], [700, 860], [1100, 820], [880, 470]].map(([x, y]) => Art.tree(x, y, .3)).join('')}
-      ${[[1400, 150], [1520, 470], [1330, 300]].map(([x, y]) => `<g transform="translate(${x},${y})"><rect x="-6" y="-60" width="12" height="60" fill="#8d5a2b"/><ellipse cx="0" cy="-66" rx="60" ry="18" fill="#9ccc65"/></g>`).join('')}
-      <path d="${river}" stroke="#e8d39a" stroke-width="116" fill="none" stroke-linecap="round" opacity=".9"/>
+      ${Art.mapWorld()}
+      <path d="${river}" stroke="#2f8a3c" stroke-width="134" fill="none" stroke-linecap="round" opacity=".3"/>
+      <path d="${river}" stroke="#e8d39a" stroke-width="116" fill="none" stroke-linecap="round" opacity=".95"/>
       <path d="${river}" stroke="#1e88e5" stroke-width="92" fill="none" stroke-linecap="round"/>
       <path d="${river}" stroke="#5ccbff" stroke-width="64" fill="none" stroke-linecap="round"/>
       <path d="${river}" stroke="#a8e8ff" stroke-width="20" fill="none" stroke-linecap="round" opacity=".5"/>
       <path class="flow" d="${river}" stroke="#e1f5fe" stroke-width="6" fill="none" stroke-dasharray="20 30"/>
+      ${STOPS.slice(1).map(([x, y], k) => Art.glint((x + STOPS[k][0]) / 2 + 14, (y + STOPS[k][1]) / 2 - 12, 1.1, -k * .45)).join('')}
       <rect width="1600" height="900" fill="url(#vignette)" pointer-events="none"/>
       ${markers}
+      ${Art.mapSky()}
       <g transform="translate(${rx},${ry}) scale(${(.28 * 420 / (420 + state.rescued.length * 74)).toFixed(3)})"><g class="bob">${raftArt()}</g></g>
       ${title(800, 90, 'El río de la selva', 64)}
       ${button('homeBtn', 80, 80, 'home', '#7e57c2')}
@@ -850,6 +851,7 @@
       '🐢': () => `<g transform="translate(-12,14)">${Art.thumb('tortuga', 250)}</g>`,
       '🍌': () => `<g transform="scale(2.4)">${Art.fruit('platano')}</g>`,
       '🍉': () => `<g transform="translate(0,-10) scale(2.5)">${Art.fruit('sandia')}</g>`,
+      '🐇': () => Art.bunny(),
     };
     // Color: gota de pintura brillante. Animal: su dibujo. Emoji: dibujo propio si lo hay.
     const draw = (o) => o.color ? `<ellipse cx="0" cy="84" rx="76" ry="12" fill="#0b3016" opacity=".12"/>
@@ -903,7 +905,7 @@
 
   // ---------- Minijuego 1: nubes que llenan el charco ----------
   function setupFrog(api) {
-    const CLOUDS = [[760, 170], [990, 115], [1220, 170]];
+    const CLOUDS = [[700, 240], [985, 225], [1270, 240]];
     api.back.innerHTML = CLOUDS.map(([x, y], k) => `<g class="cloud" data-k="${k}" transform="translate(${x},${y})">${Art.halo(0, { rx: 165, ry: 105 })}<g class="drift" style="animation-delay:${-k * 2}s"><g class="pop-in cloud-art">${Art.cloud(true)}</g></g></g>`).join('') +
       `<g transform="translate(980,758)"><g id="water" class="grow" style="transform:scale(.001)"><ellipse rx="250" ry="60" fill="url(#water)"/><ellipse cx="-60" cy="-14" rx="70" ry="10" fill="#fff" opacity=".45"/></g></g>
        <g id="rainbow"></g>`;
@@ -1163,13 +1165,18 @@
     bubblePos = 'bottom';
     const n = state.rescued.length;
     let slots = '';
+    // Fondo de cada foto: cielo, sol, nube y lomas (doradas en la sabana del león).
+    const photoBack = (lion) => `<circle cx="72" cy="-92" r="28" fill="#ffd54f" opacity=".3"/><circle cx="72" cy="-92" r="19" fill="#ffd54f"/>
+        <g fill="#fff" opacity=".92"><ellipse cx="-58" cy="-96" rx="26" ry="11"/><ellipse cx="-44" cy="-104" rx="16" ry="11"/><ellipse cx="-72" cy="-101" rx="13" ry="9"/></g>
+        <path d="M-110,20 C-60,0 -20,15 30,5 C60,-2 90,10 110,2 L110,70 L-110,70 Z" fill="${lion ? '#edc76f' : '#7cc96b'}"/>
+        <path d="M-110,46 C-50,32 20,48 110,34 L110,70 L-110,70 Z" fill="${lion ? '#dba945' : '#58b04f'}"/>`;
     LEVELS.forEach((L, i) => {
       const x = 260 + (i % 4) * 360, y = 370 + Math.floor(i / 4) * 330;
       const done = !L.soon && isRescued(L.id), lion = i === LEVELS.length - 1;
       slots += `<g class="slot" data-i="${i}" transform="translate(${x},${y})"><g transform="rotate(${i % 2 ? 3 : -3})">
         <rect x="-125" y="-145" width="250" height="290" rx="10" fill="#fff" stroke="${lion ? '#ffb300' : '#e0d6c8'}" stroke-width="${lion ? 8 : 3}" filter="url(#shadow)"/>
-        <rect x="-110" y="-130" width="220" height="200" fill="${done ? '#bfefff' : lion ? '#fff3c4' : '#eceff1'}"/>
-        ${done ? `<g transform="translate(0,-25)">${Art.family(L.id, 190)}</g><text y="118" text-anchor="middle" font-size="30" font-weight="800" fill="#5d4037">${L.name.split(' ')[0]}</text>`
+        <rect x="-110" y="-130" width="220" height="200" fill="${done ? 'url(#photoSky)' : lion ? '#fff3c4' : '#eceff1'}"/>
+        ${done ? `${photoBack(lion)}<g transform="translate(0,-25)">${Art.family(L.id, 190)}</g><text y="118" text-anchor="middle" font-size="30" font-weight="800" fill="#5d4037">${L.name.split(' ')[0]}</text>`
           : lion ? `<text y="0" text-anchor="middle" font-size="110" opacity=".5">🦁</text>`
           : `<text y="10" text-anchor="middle" font-size="100" font-weight="800" fill="#cfd8dc">?</text>`}</g></g>`;
     });
@@ -1195,6 +1202,7 @@
       ring.getBoundingClientRect();
       ring.style.transition = 'stroke-dashoffset 3s linear';
       ring.style.strokeDashoffset = '0';
+      clearTimeout(hold);
       hold = setTimeout(() => {
         cancelHold();
         if (window.confirm(`¿Empezar de nuevo? Se borrará el avance y el álbum de ${profile().name}.`)) {

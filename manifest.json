@@ -2,6 +2,7 @@
   "name": "Juju y Sofía",
   "short_name": "Juju y Sofía",
   "start_url": "./index.html",
+  "scope": "./",
   "display": "fullscreen",
   "orientation": "landscape",
   "background_color": "#1b5e20",

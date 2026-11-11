@@ -273,7 +273,7 @@ const Voice = (() => {
   // (who = quién habla, para el retrato del globo). onEnd se llama al terminar.
   api.say = (lines, onEnd) => {
     lines = [].concat(lines).filter(Boolean).map(l => typeof l === 'string' ? { t: l } : l);
-    if (!lines.length) return;
+    if (!lines.length) { if (onEnd) onEnd(); return; }
     const my = ++seq;
     hush();
     Sound.stopFile();
